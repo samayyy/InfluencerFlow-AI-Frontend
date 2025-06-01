@@ -50,7 +50,6 @@ import {
   Sliders,
   Crosshair,
   Megaphone,
-  Calendar_PYRIGHT,
   Calendar,
   Package,
   Database,
@@ -259,6 +258,39 @@ export default function CampaignAIRecommendationsPage() {
       if (result.success) {
         setSuccessMessage(`Email sent to ${creator.creator_name}!`);
         setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      const errorResult = apiUtils.handleError(error);
+      setError(errorResult.error);
+    }
+  };
+
+  const handleCallCreator = async (creator) => {
+    try {
+      // Prepare call data with only required fields
+      const callData = {
+        creator_id: creator.id,
+        phone_number: "+919167924380",
+      };
+
+      // Add campaign_id and notes only if campaign is available
+      if (campaign && campaignId) {
+        callData.campaign_id = campaignId;
+        callData.notes =
+          campaign.campaign_name || "Campaign collaboration inquiry";
+      }
+
+      const response = await apiClient.calling.initiate(callData);
+      const result = apiUtils.handleResponse(response);
+
+      if (result.success) {
+        const callDetails = result.data.call_details;
+        setSuccessMessage(
+          `✅ AI call initiated for ${creator.creator_name}! Call ID: ${callDetails.callId}. The creator will be contacted shortly.`
+        );
+        setTimeout(() => setSuccessMessage(""), 8000);
       } else {
         setError(result.error);
       }
@@ -1491,6 +1523,15 @@ export default function CampaignAIRecommendationsPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          icon={PhoneCall}
+                          onClick={() => handleCallCreator(creator)}
+                        >
+                          Call
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
                           icon={Eye}
                           onClick={() =>
                             window.open(`/creators/${creator.id}`, "_blank")
@@ -1742,6 +1783,16 @@ export default function CampaignAIRecommendationsPage() {
                       fullWidth
                     >
                       Email
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={PhoneCall}
+                      onClick={() => handleCallCreator(creator)}
+                      fullWidth
+                    >
+                      Call
                     </Button>
 
                     <Button

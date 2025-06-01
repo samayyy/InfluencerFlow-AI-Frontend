@@ -17,7 +17,6 @@ import {
   Instagram,
   Youtube,
   Twitter,
- 
   Eye,
   Heart,
   MessageCircle,
@@ -516,18 +515,31 @@ ${user?.brand_name}`,
 
   const handleCallCreator = async (creator) => {
     try {
-      const response = await apiClient.calling.initiate({
+      // Prepare call data with only required fields
+      const callData = {
         creator_id: creator.id,
-        call_purpose: "collaboration_inquiry",
-        brand_name: user?.brand_name,
-      });
+        phone_number: "+919167924380",
+      };
+
+      // Check for campaign context from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const contextCampaignId = urlParams.get("campaign_id");
+
+      // Add campaign_id and notes only if available
+      if (contextCampaignId) {
+        callData.campaign_id = contextCampaignId;
+        callData.notes = `Campaign collaboration inquiry for campaign ${contextCampaignId}`;
+      }
+
+      const response = await apiClient.calling.initiate(callData);
       const result = apiUtils.handleResponse(response);
 
       if (result.success) {
+        const callDetails = result.data.call_details;
         setSuccessMessage(
-          "AI call initiated! The creator will be contacted shortly."
+          `✅ AI call initiated for ${creator.creator_name}! Call ID: ${callDetails.callId}. The creator will be contacted shortly.`
         );
-        setTimeout(() => setSuccessMessage(""), 5000);
+        setTimeout(() => setSuccessMessage(""), 8000);
       } else {
         setError(result.error);
       }
@@ -1247,6 +1259,15 @@ ${user?.brand_name}`,
                         <Button
                           variant="outline"
                           size="sm"
+                          icon={PhoneCall}
+                          onClick={() => handleCallCreator(creator)}
+                        >
+                          Call
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
                           icon={Eye}
                           onClick={() =>
                             window.open(`/creators/${creator.id}`, "_blank")
@@ -1261,7 +1282,7 @@ ${user?.brand_name}`,
               );
             }
 
-            // Grid view layout (existing code)
+            // Grid view layout
             return (
               <div
                 key={creator.id}
