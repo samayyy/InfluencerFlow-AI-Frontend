@@ -9,8 +9,14 @@ import { Sparkles, ArrowLeft, Mail, Shield, Zap } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithGoogle, isAuthenticated, isLoading, error, clearError } =
-    useAuth();
+  const {
+    loginWithGoogle,
+    isAuthenticated,
+    isLoading,
+    error,
+    clearError,
+    hasBrand,
+  } = useAuth();
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
@@ -18,9 +24,14 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/dashboard");
+      // Check if user has brand profile
+      if (hasBrand) {
+        router.push("/dashboard");
+      } else {
+        router.push("/onboarding");
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, hasBrand, router]);
 
   // Load Google Sign-In script
   useEffect(() => {
@@ -79,7 +90,8 @@ export default function LoginPage() {
 
     window.google.accounts.id.initialize({
       client_id:
-        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "509297366198-0rr6bk49h3pa424k67c8del6b7ok09d6.apps.googleusercontent.com",
+        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+        "509297366198-0rr6bk49h3pa424k67c8del6b7ok09d6.apps.googleusercontent.com",
       callback: handleGoogleResponse,
       auto_select: false,
       cancel_on_tap_outside: true,
@@ -94,7 +106,8 @@ export default function LoginPage() {
       const result = await loginWithGoogle(response.credential, deviceInfo);
 
       if (result.success) {
-        if (result.isNewUser) {
+        // Check if user has brand profile or is new user
+        if (!result.hasBrandProfile) {
           router.push("/onboarding");
         } else {
           router.push("/dashboard");

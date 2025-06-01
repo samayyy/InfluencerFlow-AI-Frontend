@@ -10,6 +10,7 @@ const initialState = {
   isLoading: true,
   error: null,
   tokens: null,
+  hasBrand: false,
 };
 
 // Action types
@@ -21,6 +22,7 @@ const AUTH_ACTIONS = {
   UPDATE_USER: "UPDATE_USER",
   CLEAR_ERROR: "CLEAR_ERROR",
   SET_LOADING: "SET_LOADING",
+  SET_BRAND_STATUS: "SET_BRAND_STATUS",
 };
 
 // Reducer
@@ -41,6 +43,9 @@ const authReducer = (state, action) => {
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        hasBrand: !!(
+          action.payload.user?.brand_id && action.payload.user?.brand_name
+        ),
       };
 
     case AUTH_ACTIONS.AUTH_FAILURE:
@@ -51,6 +56,7 @@ const authReducer = (state, action) => {
         isAuthenticated: false,
         isLoading: false,
         error: action.payload,
+        hasBrand: false,
       };
 
     case AUTH_ACTIONS.LOGOUT:
@@ -60,9 +66,17 @@ const authReducer = (state, action) => {
       };
 
     case AUTH_ACTIONS.UPDATE_USER:
+      const updatedUser = { ...state.user, ...action.payload };
       return {
         ...state,
-        user: { ...state.user, ...action.payload },
+        user: updatedUser,
+        hasBrand: !!(updatedUser?.brand_id && updatedUser?.brand_name),
+      };
+
+    case AUTH_ACTIONS.SET_BRAND_STATUS:
+      return {
+        ...state,
+        hasBrand: action.payload,
       };
 
     case AUTH_ACTIONS.CLEAR_ERROR:
@@ -108,13 +122,26 @@ export const AuthProvider = ({ children }) => {
 
       if (result.success) {
         const userData = result.data.user;
+
+        // Check if user has brand profile
+        let hasBrandProfile = false;
+        if (userData.brand_id) {
+          try {
+            const brandResponse = await apiClient.brands.getProfile();
+            const brandResult = apiUtils.handleResponse(brandResponse);
+            hasBrandProfile = brandResult.success;
+          } catch (brandError) {
+            console.log("Brand profile not found");
+          }
+        }
+
         // Store user data in localStorage
         localStorage.setItem("user", JSON.stringify(userData));
 
         dispatch({
           type: AUTH_ACTIONS.AUTH_SUCCESS,
           payload: {
-            user: userData,
+            user: { ...userData, hasBrandProfile },
             tokens: { accessToken: token },
           },
         });
@@ -143,6 +170,18 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         const { user, tokens, isNewUser } = result.data;
 
+        // Check if user has brand profile
+        let hasBrandProfile = false;
+        if (user.brand_id) {
+          try {
+            const brandResponse = await apiClient.brands.getProfile();
+            const brandResult = apiUtils.handleResponse(brandResponse);
+            hasBrandProfile = brandResult.success;
+          } catch (brandError) {
+            console.log("Brand profile not found");
+          }
+        }
+
         // Store tokens and user data
         apiUtils.setAuthToken(tokens.accessToken);
         localStorage.setItem("refreshToken", tokens.refreshToken);
@@ -150,10 +189,13 @@ export const AuthProvider = ({ children }) => {
 
         dispatch({
           type: AUTH_ACTIONS.AUTH_SUCCESS,
-          payload: { user, tokens },
+          payload: {
+            user: { ...user, hasBrandProfile },
+            tokens,
+          },
         });
 
-        return { success: true, isNewUser };
+        return { success: true, isNewUser, hasBrandProfile };
       } else {
         dispatch({
           type: AUTH_ACTIONS.AUTH_FAILURE,
@@ -232,6 +274,14 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  // Set brand status
+  const setBrandStatus = (hasBrand) => {
+    dispatch({
+      type: AUTH_ACTIONS.SET_BRAND_STATUS,
+      payload: hasBrand,
+    });
+  };
+
   // Get user sessions
   const getUserSessions = async () => {
     try {
@@ -254,7 +304,7 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user has brand profile
   const hasBrandProfile = () => {
-    return state.user?.brand_id && state.user?.brand_name;
+    return state.hasBrand && state.user?.brand_id && state.user?.brand_name;
   };
 
   // Check user role
@@ -285,6 +335,7 @@ export const AuthProvider = ({ children }) => {
     isLoading: state.isLoading,
     error: state.error,
     tokens: state.tokens,
+    hasBrand: state.hasBrand,
 
     // Actions
     loginWithGoogle,
@@ -294,6 +345,7 @@ export const AuthProvider = ({ children }) => {
     getUserSessions,
     revokeSession,
     clearError,
+    setBrandStatus,
 
     // Utility functions
     hasBrandProfile,
@@ -323,7 +375,8 @@ export const withAuth = (WrappedComponent, options = {}) => {
   } = options;
 
   return function AuthProtectedComponent(props) {
-    const { isAuthenticated, isLoading, user, isBrand, isAdmin } = useAuth();
+    const { isAuthenticated, isLoading, user, isBrand, isAdmin, hasBrand } =
+      useAuth();
 
     useEffect(() => {
       if (!isLoading) {
@@ -332,7 +385,7 @@ export const withAuth = (WrappedComponent, options = {}) => {
           return;
         }
 
-        if (requireBrand && !isBrand()) {
+        if (requireBrand && !hasBrand) {
           window.location.href = "/onboarding";
           return;
         }
@@ -342,7 +395,7 @@ export const withAuth = (WrappedComponent, options = {}) => {
           return;
         }
       }
-    }, [isAuthenticated, isLoading, user]);
+    }, [isAuthenticated, isLoading, user, hasBrand]);
 
     if (isLoading) {
       return (
@@ -356,7 +409,7 @@ export const withAuth = (WrappedComponent, options = {}) => {
       return null;
     }
 
-    if (requireBrand && !isBrand()) {
+    if (requireBrand && !hasBrand) {
       return null;
     }
 

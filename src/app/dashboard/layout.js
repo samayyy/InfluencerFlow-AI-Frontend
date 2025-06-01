@@ -28,7 +28,7 @@ import Button from "../../components/common/Button";
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, hasBrand } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -62,15 +62,26 @@ export default function DashboardLayout({ children }) {
     await logout();
   };
 
-  if (isLoading) {
+  // Check if current page should show the layout
+  const shouldShowLayout = () => {
+    const excludedPaths = ["/auth", "/onboarding", "/"];
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="loading-spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
+      !excludedPaths.some((path) => pathname.startsWith(path)) &&
+      pathname !== "/"
     );
+  };
+
+  // If not authenticated or loading, don't show layout
+  if (isLoading || !shouldShowLayout()) {
+    return children;
+  }
+
+  // If authenticated but no brand profile, redirect to onboarding
+  if (!hasBrand && pathname !== "/onboarding") {
+    if (typeof window !== "undefined") {
+      window.location.href = "/onboarding";
+    }
+    return null;
   }
 
   return (
@@ -143,7 +154,7 @@ export default function DashboardLayout({ children }) {
               <p className="text-sm font-medium text-gray-900">
                 {user?.first_name} {user?.last_name}
               </p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
+              <p className="text-xs text-gray-500">{user?.brand_name}</p>
             </div>
           </div>
         </div>
@@ -178,6 +189,7 @@ export default function DashboardLayout({ children }) {
                   type="text"
                   placeholder="Search creators, campaigns, products..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  onClick={() => (window.location.href = "/creators")}
                 />
               </div>
             </div>
@@ -223,7 +235,7 @@ export default function DashboardLayout({ children }) {
                     </div>
 
                     <Link
-                      href="/dashboard/settings/profile"
+                      href="/settings/profile"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <User className="w-4 h-4 mr-3" />
@@ -231,7 +243,7 @@ export default function DashboardLayout({ children }) {
                     </Link>
 
                     <Link
-                      href="/dashboard/settings/billing"
+                      href="/settings/billing"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <CreditCard className="w-4 h-4 mr-3" />

@@ -33,6 +33,7 @@ export default function EnhancedOnboardingPage() {
     isAuthenticated,
     isLoading: authLoading,
     updateUser,
+    setBrandStatus,
   } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -226,7 +227,10 @@ export default function EnhancedOnboardingPage() {
           brand_name: result.data.brand.brand_name,
         });
 
-        // Redirect to product creation instead of dashboard
+        // Update brand status
+        setBrandStatus(true);
+
+        // Redirect directly to product creation
         router.push("/products/create?onboarding=true");
       } else {
         setError(result.error || "Failed to create brand profile");
@@ -283,7 +287,8 @@ export default function EnhancedOnboardingPage() {
             Set up your brand profile
           </h1>
           <p className="text-xl text-gray-600">
-            Let AI help you create the perfect brand profile
+            Let AI help you create the perfect brand profile for your influencer
+            campaigns
           </p>
         </div>
 
@@ -740,7 +745,7 @@ export default function EnhancedOnboardingPage() {
               icon={currentStep === 3 ? CheckCircle : ArrowRight}
               iconPosition="right"
             >
-              {currentStep === 3 ? "Complete Setup" : "Next Step"}
+              {currentStep === 3 ? "Complete & Add Products" : "Next Step"}
             </Button>
           </div>
         </div>
@@ -748,8 +753,9 @@ export default function EnhancedOnboardingPage() {
         {/* Additional Info */}
         <div className="text-center text-gray-500 text-sm">
           <p>
-            After completing your brand profile, you'll be guided to add
-            products and create campaigns.
+            After completing your brand profile, you'll be guided to add your
+            first product and create campaigns with AI-powered creator
+            recommendations.
           </p>
         </div>
       </div>
