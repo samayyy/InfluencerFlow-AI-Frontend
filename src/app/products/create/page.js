@@ -1,10 +1,12 @@
+// src/app/products/create/page.js
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "../../context/authContext";
-import Button from "../../components/common/Button";
-import Input from "../../components/common/Input";
+import { useAuth } from "../../../context/authContext";
+import Button from "../../../components/common/Button";
+import Input from "../../../components/common/Input";
 import {
   Package,
   Globe,
@@ -23,7 +25,7 @@ import {
   FileText,
   Star,
 } from "lucide-react";
-import apiClient, { apiUtils } from "../../lib/api";
+import apiClient, { apiUtils } from "../../../lib/api";
 
 export default function ProductCreatePage() {
   const router = useRouter();
@@ -457,26 +459,6 @@ export default function ProductCreatePage() {
                     </span>
                   </div>
 
-                  {/* Unique Selling Points */}
-                  {aiAnalysis.unique_selling_points && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                        <Star className="w-4 h-4 mr-2 text-primary-600" />
-                        Unique Selling Points
-                      </h4>
-                      <div className="space-y-1">
-                        {aiAnalysis.unique_selling_points.map((usp, index) => (
-                          <span
-                            key={index}
-                            className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full mr-1 mb-1"
-                          >
-                            {usp}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Target Audience */}
                   {aiAnalysis.target_audience && (
                     <div>
@@ -522,62 +504,6 @@ export default function ProductCreatePage() {
                             )}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Content Opportunities */}
-                  {aiAnalysis.content_opportunities && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                        <FileText className="w-4 h-4 mr-2 text-primary-600" />
-                        Content Opportunities
-                      </h4>
-                      <div className="space-y-2">
-                        {aiAnalysis.content_opportunities.video_content && (
-                          <div>
-                            <span className="text-xs font-medium text-gray-600">
-                              Video:
-                            </span>
-                            <p className="text-xs text-gray-600">
-                              {aiAnalysis.content_opportunities.video_content.join(
-                                ", "
-                              )}
-                            </p>
-                          </div>
-                        )}
-                        {aiAnalysis.content_opportunities.written_content && (
-                          <div>
-                            <span className="text-xs font-medium text-gray-600">
-                              Written:
-                            </span>
-                            <p className="text-xs text-gray-600">
-                              {aiAnalysis.content_opportunities.written_content.join(
-                                ", "
-                              )}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Ideal Creator Types */}
-                  {aiAnalysis.ideal_creator_types && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                        <Zap className="w-4 h-4 mr-2 text-primary-600" />
-                        Ideal Creator Types
-                      </h4>
-                      <div className="flex flex-wrap gap-1">
-                        {aiAnalysis.ideal_creator_types.map((type, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full"
-                          >
-                            {type}
-                          </span>
-                        ))}
                       </div>
                     </div>
                   )}
