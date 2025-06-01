@@ -509,14 +509,14 @@ export default function CampaignManagementPage() {
 
                     <div className="flex items-center space-x-2 ml-4">
                       <Link
-                        href={`/dashboard/campaigns/${campaign.id}`}
+                        href={`/campaigns/${campaign.id}`}
                         className="p-2 text-gray-400 hover:text-primary-600 transition-colors"
                       >
                         <Eye className="w-5 h-5" />
                       </Link>
 
                       <Link
-                        href={`/dashboard/campaigns/${campaign.id}/edit`}
+                        href={`/campaigns/${campaign.id}/edit`}
                         className="p-2 text-gray-400 hover:text-primary-600 transition-colors"
                       >
                         <Edit3 className="w-5 h-5" />

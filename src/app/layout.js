@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Inter, Poppins } from "next/font/google";
 import { AuthProvider } from "../context/authContext";
+import DashboardWrapper from "../components/layout/DashboardWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,7 +45,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={inter.className}>
         <AuthProvider>
-          <div className="min-h-screen bg-gray-50">{children}</div>
+          <DashboardWrapper>{children}</DashboardWrapper>
         </AuthProvider>
       </body>
     </html>

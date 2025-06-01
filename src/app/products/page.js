@@ -375,7 +375,7 @@ export default function ProductManagementPage() {
                 {/* Action Buttons */}
                 <div className="flex space-x-2">
                   <Link
-                    href={`/dashboard/products/${product.id}`}
+                    href={`/products/${product.id}`}
                     className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-center"
                   >
                     <Eye className="w-4 h-4 inline mr-1" />
@@ -383,7 +383,7 @@ export default function ProductManagementPage() {
                   </Link>
 
                   <Link
-                    href={`/dashboard/products/${product.id}/edit`}
+                    href={`/products/${product.id}/edit`}
                     className="flex-1 px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors text-center"
                   >
                     <Edit3 className="w-4 h-4 inline mr-1" />

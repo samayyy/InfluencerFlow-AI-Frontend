@@ -203,7 +203,7 @@ export default function DashboardPage() {
             <Button
               variant="primary"
               icon={Plus}
-              href="/dashboard/campaigns/create"
+              href="/campaigns/create"
             >
               New Campaign
             </Button>
@@ -384,7 +384,7 @@ export default function DashboardPage() {
               Recent Activity
             </h3>
             <Link
-              href="/dashboard/activity"
+              href="/activity"
               className="text-sm text-primary-600 hover:text-primary-700"
             >
               View all
@@ -434,7 +434,7 @@ export default function DashboardPage() {
               Top Performing Creators
             </h3>
             <Link
-              href="/dashboard/creators"
+              href="/creators"
               className="text-sm text-primary-600 hover:text-primary-700"
             >
               View all

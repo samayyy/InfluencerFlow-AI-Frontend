@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "../../../context/authContext";
-import Button from "../../../components/common/Button";
-import Input from "../../../components/common/Input";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "../../../../context/authContext";
+import Button from "../../../../components/common/Button";
+import Input from "../../../../components/common/Input";
 import {
   Megaphone,
+  ArrowLeft,
   Package,
   Target,
   DollarSign,
@@ -14,35 +15,32 @@ import {
   Users,
   CheckCircle,
   AlertCircle,
-  ArrowRight,
-  Sparkles,
-  Brain,
-  Zap,
+  Save,
   Eye,
+  Lightbulb,
   TrendingUp,
-  MessageSquare,
-  Star,
+  Brain,
+  Sparkles,
 } from "lucide-react";
-import apiClient, { apiUtils } from "../../../lib/api";
+import apiClient, { apiUtils } from "../../../../lib/api";
 
-export default function CampaignCreatePage() {
+export default function CampaignEditPage() {
+  const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const campaignId = params?.id;
 
-  const isOnboarding = searchParams?.get("onboarding") === "true";
-  const preSelectedProductId = searchParams?.get("product_id");
-
-  const [isLoading, setIsLoading] = useState(false);
+  const [campaign, setCampaign] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [formData, setFormData] = useState({
     campaign_name: "",
     campaign_type: "sponsored_post",
-    product_id: preSelectedProductId || "",
+    product_id: "",
     description: "",
     objectives: "",
     budget: "",
@@ -69,18 +67,61 @@ export default function CampaignCreatePage() {
   ];
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    if (preSelectedProductId && products.length > 0) {
-      const product = products.find((p) => p.id === preSelectedProductId);
-      if (product) {
-        setSelectedProduct(product);
-        prefillFromProduct(product);
-      }
+    if (campaignId) {
+      fetchCampaign();
+      fetchProducts();
     }
-  }, [preSelectedProductId, products]);
+  }, [campaignId]);
+
+  const fetchCampaign = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiClient.campaigns.getById(campaignId);
+      const result = apiUtils.handleResponse(response);
+
+      if (result.success) {
+        const campaignData = result.data.campaign;
+        setCampaign(campaignData);
+
+        // Populate form data
+        setFormData({
+          campaign_name: campaignData.campaign_name || "",
+          campaign_type: campaignData.campaign_type || "sponsored_post",
+          product_id: campaignData.product_id || "",
+          description: campaignData.description || "",
+          objectives: campaignData.objectives || "",
+          budget: campaignData.budget?.toString() || "",
+          currency: campaignData.currency || "USD",
+          start_date: campaignData.start_date
+            ? campaignData.start_date.split("T")[0]
+            : "",
+          end_date: campaignData.end_date
+            ? campaignData.end_date.split("T")[0]
+            : "",
+          content_guidelines: campaignData.content_guidelines || "",
+          hashtags: Array.isArray(campaignData.hashtags)
+            ? campaignData.hashtags
+                .map((h) => (h.startsWith("#") ? h : "#" + h))
+                .join(", ")
+            : campaignData.hashtags || "",
+          mention_requirements: campaignData.mention_requirements || "",
+          approval_required: campaignData.approval_required !== false, // Default to true
+          target_audience: {
+            age_range: campaignData.target_audience?.age_range || "",
+            interests: campaignData.target_audience?.interests || "",
+            demographics: campaignData.target_audience?.demographics || "",
+          },
+        });
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      const errorResult = apiUtils.handleError(error);
+      setError(errorResult.error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -92,35 +133,6 @@ export default function CampaignCreatePage() {
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
-    }
-  };
-
-  const prefillFromProduct = (product) => {
-    setFormData((prev) => ({
-      ...prev,
-      campaign_name: `${product.product_name} Campaign`,
-      description: `Promote our ${product.product_name} to reach new audiences and drive engagement.`,
-      objectives: `Increase awareness and sales for ${product.product_name}`,
-      hashtags: `#${product.product_name.replace(
-        /\s+/g,
-        ""
-      )}, #sponsored, #brand`,
-      mention_requirements: `@${
-        user?.brand_name?.replace(/\s+/g, "") || "yourbrand"
-      }`,
-    }));
-
-    // If product has AI analysis, use it for targeting
-    if (product.ai_overview?.target_audience) {
-      const targetAudience = product.ai_overview.target_audience;
-      setFormData((prev) => ({
-        ...prev,
-        target_audience: {
-          demographics: targetAudience.primary_demographics || "",
-          interests: targetAudience.interests?.join(", ") || "",
-          age_range: targetAudience.age_groups?.join(", ") || "",
-        },
-      }));
     }
   };
 
@@ -143,27 +155,16 @@ export default function CampaignCreatePage() {
     setError("");
   };
 
-  const handleProductChange = (productId) => {
-    const product = products.find((p) => p.id === productId);
-    setSelectedProduct(product);
-    setFormData((prev) => ({ ...prev, product_id: productId }));
-
-    if (product) {
-      prefillFromProduct(product);
-    }
-  };
-
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     if (!formData.campaign_name.trim()) {
       setError("Campaign name is required");
       return;
     }
 
-    setIsLoading(true);
+    setIsSaving(true);
     try {
-      const campaignData = {
+      const updateData = {
         ...formData,
-        brand_id: user.brand_id,
         budget: formData.budget ? parseFloat(formData.budget) : undefined,
         hashtags: formData.hashtags
           ? formData.hashtags.split(",").map((h) => h.trim().replace(/^#/, ""))
@@ -176,24 +177,13 @@ export default function CampaignCreatePage() {
           : undefined,
       };
 
-      const response = await apiClient.campaigns.create(campaignData);
+      const response = await apiClient.campaigns.update(campaignId, updateData);
       const result = apiUtils.handleResponse(response);
 
       if (result.success) {
-        setSuccessMessage("Campaign created successfully!");
-
-        // Always redirect to recommendations page after creation
-        setTimeout(() => {
-          if (isOnboarding) {
-            router.push(
-              `/campaigns/${result.data.campaign.id}/recommendations?onboarding=true`
-            );
-          } else {
-            router.push(
-              `/campaigns/${result.data.campaign.id}/recommendations`
-            );
-          }
-        }, 1000);
+        setCampaign(result.data.campaign);
+        setSuccessMessage("Campaign updated successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
       } else {
         setError(result.error);
       }
@@ -201,9 +191,48 @@ export default function CampaignCreatePage() {
       const errorResult = apiUtils.handleError(error);
       setError(errorResult.error);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
+
+  const getSelectedProduct = () => {
+    return products.find((p) => p.id === formData.product_id);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="loading-spinner mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading campaign...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!campaign) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <Megaphone className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Campaign Not Found
+          </h3>
+          <p className="text-gray-600 mb-6">
+            The campaign you're trying to edit doesn't exist or has been
+            removed.
+          </p>
+          <Button variant="primary" onClick={() => router.push("/campaigns")}>
+            Back to Campaigns
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedProduct = getSelectedProduct();
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -211,37 +240,50 @@ export default function CampaignCreatePage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center mr-4">
-              <Megaphone className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {isOnboarding
-                  ? "Create Your First Campaign"
-                  : "Create New Campaign"}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {isOnboarding
-                  ? "Set up your campaign and get AI-powered creator recommendations"
-                  : "Launch a new influencer marketing campaign"}
-              </p>
-            </div>
+            <Button
+              variant="ghost"
+              icon={ArrowLeft}
+              onClick={() => router.back()}
+              className="mr-4"
+            >
+              Back
+            </Button>
           </div>
 
-          {isOnboarding && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <Sparkles className="w-5 h-5 text-green-600 mr-2" />
-                <div>
-                  <p className="text-green-900 font-medium">Almost Done!</p>
-                  <p className="text-green-700 text-sm">
-                    After creating your campaign, you'll get AI-powered creator
-                    recommendations based on your product and target audience.
-                  </p>
-                </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center mr-4">
+                <Megaphone className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Edit Campaign
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Update your campaign details and settings
+                </p>
               </div>
             </div>
-          )}
+
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                icon={Eye}
+                onClick={() => router.push(`/campaigns/${campaignId}`)}
+              >
+                View Campaign
+              </Button>
+
+              <Button
+                variant="primary"
+                icon={Save}
+                onClick={handleSave}
+                loading={isSaving}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Success/Error Messages */}
@@ -313,7 +355,9 @@ export default function CampaignCreatePage() {
                     </label>
                     <select
                       value={formData.product_id}
-                      onChange={(e) => handleProductChange(e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("product_id", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="">Select a product</option>
@@ -323,17 +367,6 @@ export default function CampaignCreatePage() {
                         </option>
                       ))}
                     </select>
-                    {products.length === 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        No products found.{" "}
-                        <button
-                          onClick={() => router.push("/products/create")}
-                          className="text-primary-600 hover:text-primary-700"
-                        >
-                          Create one first
-                        </button>
-                      </p>
-                    )}
                   </div>
 
                   <Input
@@ -492,7 +525,7 @@ export default function CampaignCreatePage() {
                   Target Audience
                   {selectedProduct?.ai_overview && (
                     <span className="text-xs text-primary-600 ml-2">
-                      (Auto-filled from product)
+                      (Product insights available)
                     </span>
                   )}
                 </h2>
@@ -536,16 +569,15 @@ export default function CampaignCreatePage() {
                 </div>
               </div>
 
-              {/* Submit Section */}
+              {/* Save Section */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Ready to Launch?
+                      Save Changes
                     </h3>
                     <p className="text-gray-600 text-sm">
-                      Your campaign will be created and you'll get AI-powered
-                      creator recommendations
+                      Update your campaign with the latest information
                     </p>
                   </div>
                   <div className="flex space-x-4">
@@ -554,14 +586,11 @@ export default function CampaignCreatePage() {
                     </Button>
                     <Button
                       variant="primary"
-                      onClick={handleSubmit}
-                      loading={isLoading}
-                      icon={ArrowRight}
-                      iconPosition="right"
+                      onClick={handleSave}
+                      loading={isSaving}
+                      icon={Save}
                     >
-                      {isOnboarding
-                        ? "Create & Get Recommendations"
-                        : "Create Campaign"}
+                      Save Changes
                     </Button>
                   </div>
                 </div>
@@ -611,7 +640,7 @@ export default function CampaignCreatePage() {
                     <div className="pt-3 border-t border-gray-200">
                       <p className="text-xs text-primary-600 flex items-center">
                         <Sparkles className="w-3 h-3 mr-1" />
-                        AI insights will be used for creator matching
+                        AI insights available for better targeting
                       </p>
                     </div>
                   )}
@@ -619,11 +648,89 @@ export default function CampaignCreatePage() {
               </div>
             )}
 
-            {/* Campaign Tips */}
+            {/* Quick Actions */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Quick Actions
+              </h3>
+
+              <div className="space-y-3">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  icon={Save}
+                  onClick={handleSave}
+                  loading={isSaving}
+                >
+                  Save Changes
+                </Button>
+
+                <Button
+                  variant="outline"
+                  fullWidth
+                  icon={Eye}
+                  onClick={() => router.push(`/campaigns/${campaignId}`)}
+                >
+                  View Campaign
+                </Button>
+
+                <Button
+                  variant="outline"
+                  fullWidth
+                  icon={Brain}
+                  onClick={() =>
+                    router.push(`/campaigns/${campaignId}/recommendations`)
+                  }
+                >
+                  AI Recommendations
+                </Button>
+
+                <Button variant="ghost" fullWidth onClick={() => router.back()}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+
+            {/* Campaign Info */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Campaign Information
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className="font-medium capitalize">
+                    {campaign.status || "draft"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Created:</span>
+                  <span className="font-medium">
+                    {campaign.created_at
+                      ? new Date(campaign.created_at).toLocaleDateString()
+                      : "N/A"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Last Updated:</span>
+                  <span className="font-medium">
+                    {campaign.updated_at
+                      ? new Date(campaign.updated_at).toLocaleDateString()
+                      : "N/A"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Campaign ID:</span>
+                  <span className="font-mono text-xs">{campaign.id}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Edit Tips */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Brain className="w-5 h-5 text-yellow-500 mr-2" />
-                Campaign Tips
+                <Lightbulb className="w-5 h-5 text-yellow-500 mr-2" />
+                Edit Tips
               </h3>
               <ul className="space-y-3 text-sm text-gray-600">
                 <li className="flex items-start">
@@ -638,82 +745,14 @@ export default function CampaignCreatePage() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-primary-600 mr-2">•</span>
-                  Target audience info improves creator-audience matching
-                  accuracy
+                  Updating target audience improves creator-audience matching
                 </li>
                 <li className="flex items-start">
                   <span className="text-primary-600 mr-2">•</span>
-                  Setting a realistic budget helps find creators within your
-                  range
+                  Save changes to get fresh AI recommendations
                 </li>
               </ul>
             </div>
-
-            {/* AI Features Preview */}
-            <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-xl border border-primary-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Zap className="w-5 h-5 text-primary-600 mr-2" />
-                What's Next?
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-gray-700">
-                  <Eye className="w-4 h-4 text-primary-600 mr-2" />
-                  Smart creator discovery
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <Target className="w-4 h-4 text-primary-600 mr-2" />
-                  Audience alignment matching
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <TrendingUp className="w-4 h-4 text-primary-600 mr-2" />
-                  Performance predictions
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <MessageSquare className="w-4 h-4 text-primary-600 mr-2" />
-                  Automated outreach
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <Star className="w-4 h-4 text-primary-600 mr-2" />
-                  Quality scoring
-                </div>
-              </div>
-            </div>
-
-            {/* Next Steps */}
-            {isOnboarding && (
-              <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                  After Campaign Creation
-                </h3>
-                <div className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3">
-                      1
-                    </div>
-                    <span>Get AI creator recommendations</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3">
-                      2
-                    </div>
-                    <span>Review and select creators</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3">
-                      3
-                    </div>
-                    <span>Send automated outreach</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3">
-                      4
-                    </div>
-                    <span>Track campaign performance</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
