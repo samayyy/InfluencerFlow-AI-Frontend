@@ -2,23 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/authContext";
 import Button from "../../components/common/Button";
-import Input from "../../components/common/Input";
 import Modal from "../../components/common/Modal";
 import {
   Package,
   Plus,
   Search,
-  Filter,
   MoreVertical,
   Edit3,
   Trash2,
   ExternalLink,
   Sparkles,
-  TrendingUp,
-  DollarSign,
-  Calendar,
   Eye,
   CheckCircle,
   AlertCircle,
@@ -27,26 +23,15 @@ import apiClient, { apiUtils } from "../../lib/api";
 
 export default function ProductManagementPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-
-  const [newProduct, setNewProduct] = useState({
-    product_name: "",
-    product_url: "",
-    category: "",
-    subcategory: "",
-    price: "",
-    currency: "USD",
-    description: "",
-    key_features: "",
-  });
 
   const categories = [
     "Electronics",
@@ -75,60 +60,6 @@ export default function ProductManagementPage() {
 
       if (result.success) {
         setProducts(result.data.products || []);
-      } else {
-        setError(result.error);
-      }
-    } catch (error) {
-      const errorResult = apiUtils.handleError(error);
-      setError(errorResult.error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInputChange = (field, value) => {
-    setNewProduct((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    setError("");
-  };
-
-  const handleCreateProduct = async () => {
-    if (!newProduct.product_name.trim()) {
-      setError("Product name is required");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const productData = {
-        ...newProduct,
-        brand_id: user.brand_id,
-        price: newProduct.price ? parseFloat(newProduct.price) : undefined,
-        key_features: newProduct.key_features
-          ? newProduct.key_features.split(",").map((f) => f.trim())
-          : [],
-      };
-
-      const response = await apiClient.products.create(productData);
-      const result = apiUtils.handleResponse(response);
-
-      if (result.success) {
-        setProducts((prev) => [result.data.product, ...prev]);
-        setShowCreateModal(false);
-        setNewProduct({
-          product_name: "",
-          product_url: "",
-          category: "",
-          subcategory: "",
-          price: "",
-          currency: "USD",
-          description: "",
-          key_features: "",
-        });
-        setSuccessMessage("Product created successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
       } else {
         setError(result.error);
       }
@@ -206,7 +137,7 @@ export default function ProductManagementPage() {
             <Button
               variant="primary"
               icon={Plus}
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => router.push("/products/create")}
             >
               Add Product
             </Button>
@@ -291,7 +222,7 @@ export default function ProductManagementPage() {
             <Button
               variant="primary"
               icon={Plus}
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => router.push("/products/create")}
             >
               Add Your First Product
             </Button>
@@ -405,123 +336,6 @@ export default function ProductManagementPage() {
           ))}
         </div>
       )}
-
-      {/* Create Product Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Add New Product"
-        size="lg"
-        footer={
-          <div className="flex justify-end space-x-3">
-            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleCreateProduct}
-              loading={isLoading}
-            >
-              Create Product
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <Input
-            label="Product Name"
-            placeholder="Enter product name"
-            value={newProduct.product_name}
-            onChange={(e) => handleInputChange("product_name", e.target.value)}
-            required
-            icon={Package}
-          />
-
-          <Input
-            label="Product URL"
-            placeholder="https://example.com/product"
-            value={newProduct.product_url}
-            onChange={(e) => handleInputChange("product_url", e.target.value)}
-            icon={ExternalLink}
-            helperText="Link to your product page (optional)"
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={newProduct.category}
-                onChange={(e) => handleInputChange("category", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Select category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Input
-              label="Subcategory"
-              placeholder="e.g., Smartphones"
-              value={newProduct.subcategory}
-              onChange={(e) => handleInputChange("subcategory", e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Price"
-              type="number"
-              placeholder="99.99"
-              value={newProduct.price}
-              onChange={(e) => handleInputChange("price", e.target.value)}
-              icon={DollarSign}
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Currency
-              </label>
-              <select
-                value={newProduct.currency}
-                onChange={(e) => handleInputChange("currency", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              rows={4}
-              placeholder="Describe your product..."
-              value={newProduct.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <Input
-            label="Key Features"
-            placeholder="Feature 1, Feature 2, Feature 3"
-            value={newProduct.key_features}
-            onChange={(e) => handleInputChange("key_features", e.target.value)}
-            helperText="Separate features with commas"
-          />
-        </div>
-      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

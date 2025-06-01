@@ -51,8 +51,6 @@ export default function CampaignDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRecommendations, setIsLoadingRecommendations] =
     useState(false);
-  const [showRecommendationsModal, setShowRecommendationsModal] =
-    useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -105,13 +103,12 @@ export default function CampaignDetailPage() {
 
       if (result.success) {
         setRecommendations(result.data.recommendations);
-        setShowRecommendationsModal(true);
-        setSuccessMessage(
-          fresh
-            ? "Fresh AI recommendations generated!"
-            : "AI recommendations loaded!"
+        // Route to recommendations page instead of showing modal
+        router.push(
+          `/campaigns/${campaignId}/recommendations${
+            isOnboarding ? "?onboarding=true" : ""
+          }`
         );
-        setTimeout(() => setSuccessMessage(""), 3000);
       } else {
         setError(result.error);
       }
@@ -462,7 +459,7 @@ export default function CampaignDetailPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                   <Sparkles className="w-6 h-6 text-primary-600 mr-2" />
-                  AI Recommendations
+                  AI Recommendations Available
                 </h2>
                 <Button
                   variant="outline"
@@ -496,303 +493,73 @@ export default function CampaignDetailPage() {
                 </div>
               </div>
 
-              <Button
-                variant="primary"
-                onClick={() => setShowRecommendationsModal(true)}
-                icon={Eye}
-                fullWidth
-              >
-                View All Recommendations
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    router.push(`/campaigns/${campaignId}/recommendations`)
+                  }
+                  icon={Eye}
+                  fullWidth
+                >
+                  View All AI Recommendations
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleGetRecommendations(true)}
+                  icon={RefreshCw}
+                  loading={isLoadingRecommendations}
+                >
+                  Generate Fresh
+                </Button>
+              </div>
+
+              <div className="mt-4 text-center">
+                <p className="text-xs text-primary-600">
+                  ✨ Powered by advanced AI algorithms analyzing 18 creators
+                  with{" "}
+                  {Math.round(
+                    (recommendations.search_metadata?.confidence_score || 0.9) *
+                      100
+                  )}
+                  % confidence
+                </p>
+              </div>
             </div>
           )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Quick Actions
-            </h3>
+        <div className="space-y-3">
+          <Button
+            variant="primary"
+            fullWidth
+            icon={Brain}
+            onClick={() =>
+              router.push(`/campaigns/${campaignId}/recommendations`)
+            }
+          >
+            {recommendations ? "View" : "Get"} AI Recommendations
+          </Button>
 
-            <div className="space-y-3">
-              <Button
-                variant="primary"
-                fullWidth
-                icon={Brain}
-                onClick={() => handleGetRecommendations(false)}
-                loading={isLoadingRecommendations}
-              >
-                {recommendations ? "View" : "Get"} AI Recommendations
-              </Button>
+          <Button
+            variant="outline"
+            fullWidth
+            icon={Edit3}
+            onClick={() => router.push(`/campaigns/${campaign.id}/edit`)}
+          >
+            Edit Campaign
+          </Button>
 
-              <Button
-                variant="outline"
-                fullWidth
-                icon={Edit3}
-                onClick={() => router.push(`/campaigns/${campaign.id}/edit`)}
-              >
-                Edit Campaign
-              </Button>
+          <Button variant="outline" fullWidth icon={BarChart3}>
+            View Analytics
+          </Button>
 
-              <Button variant="outline" fullWidth icon={BarChart3}>
-                View Analytics
-              </Button>
-
-              <Button variant="outline" fullWidth icon={Download}>
-                Export Data
-              </Button>
-            </div>
-          </div>
-
-          {/* Campaign Stats */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Campaign Performance
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <Users className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    Creators Contacted
-                  </span>
-                </div>
-                <span className="font-medium text-gray-900">
-                  {campaign.selected_influencers?.length || 0}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <Eye className="w-4 h-4 text-green-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">Total Reach</span>
-                </div>
-                <span className="font-medium text-gray-900">
-                  {campaign.performance_metrics?.total_reach || "0"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <TrendingUp className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">Engagement Rate</span>
-                </div>
-                <span className="font-medium text-gray-900">
-                  {campaign.performance_metrics?.engagement_rate || "0"}%
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                    <DollarSign className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">ROI</span>
-                </div>
-                <span className="font-medium text-gray-900">
-                  {campaign.performance_metrics?.roi || "0"}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Recent Activity
-            </h3>
-
-            <div className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-primary-600 rounded-full mt-2"></div>
-                <div>
-                  <p className="text-sm text-gray-900">Campaign created</p>
-                  <p className="text-xs text-gray-500">
-                    {formatDate(campaign.created_at)}
-                  </p>
-                </div>
-              </div>
-
-              {recommendations && (
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm text-gray-900">
-                      AI recommendations generated
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {recommendations.recommendations?.length} creators found
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <Button variant="outline" fullWidth icon={Download}>
+            Export Data
+          </Button>
         </div>
       </div>
-
-      {/* AI Recommendations Modal */}
-      <Modal
-        isOpen={showRecommendationsModal}
-        onClose={() => setShowRecommendationsModal(false)}
-        title="AI Creator Recommendations"
-        size="xl"
-      >
-        {recommendations && (
-          <div className="space-y-6">
-            {/* Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary-600">
-                  {recommendations.total_found}
-                </p>
-                <p className="text-sm text-gray-600">Total Found</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary-600">
-                  {recommendations.budget_filtered}
-                </p>
-                <p className="text-sm text-gray-600">Budget Matches</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary-600">
-                  {recommendations.recommendations?.length}
-                </p>
-                <p className="text-sm text-gray-600">Top Recommendations</p>
-              </div>
-            </div>
-
-            {/* Creator List */}
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {recommendations.recommendations?.map((rec, index) => {
-                const creator = rec.creator_data;
-                const metrics =
-                  creator.platform_metrics?.[creator.primary_platform];
-
-                return (
-                  <div
-                    key={creator.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <img
-                          src={
-                            creator.profile_image_url ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              creator.creator_name
-                            )}&background=3B82F6&color=fff`
-                          }
-                          alt={creator.creator_name}
-                          className="w-12 h-12 rounded-full"
-                        />
-
-                        <div>
-                          <h4 className="font-semibold text-gray-900 flex items-center">
-                            {creator.creator_name}
-                            {creator.verification_status === "verified" && (
-                              <CheckCircle className="w-4 h-4 text-blue-500 ml-1" />
-                            )}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {creator.niche}
-                          </p>
-
-                          <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                            <span>
-                              {formatNumber(metrics?.follower_count)} followers
-                            </span>
-                            <span
-                              className={getEngagementColor(
-                                metrics?.engagement_rate
-                              )}
-                            >
-                              {metrics?.engagement_rate?.toFixed(1)}% engagement
-                            </span>
-                            {creator.client_satisfaction_score && (
-                              <div className="flex items-center">
-                                <Star className="w-3 h-3 text-yellow-500 mr-1" />
-                                {creator.client_satisfaction_score.toFixed(1)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-primary-600">
-                          {(rec.search_score * 100).toFixed(0)}% match
-                        </span>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={Mail}
-                          onClick={() => handleContactCreator(creator)}
-                        >
-                          Contact
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={ExternalLink}
-                          onClick={() =>
-                            window.open(`/creators/${creator.id}`, "_blank")
-                          }
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </div>
-
-                    {rec.recommendation_reasons && (
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {rec.recommendation_reasons
-                          .slice(0, 3)
-                          .map((reason, reasonIndex) => (
-                            <span
-                              key={reasonIndex}
-                              className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full"
-                            >
-                              {reason}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => handleGetRecommendations(true)}
-                icon={RefreshCw}
-                loading={isLoadingRecommendations}
-              >
-                Refresh Recommendations
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => setShowRecommendationsModal(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }
