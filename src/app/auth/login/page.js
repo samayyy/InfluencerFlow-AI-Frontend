@@ -24,6 +24,9 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("🚀 ~ useEffect ~ isAuthenticated:", isAuthenticated);
+      console.log("🚀 ~ useEffect ~ hasBrand:", hasBrand);
+
       // Check if user has brand profile
       if (hasBrand) {
         router.push("/dashboard");
@@ -104,10 +107,11 @@ export default function LoginPage() {
     try {
       const deviceInfo = getDeviceInfo();
       const result = await loginWithGoogle(response.credential, deviceInfo);
+      console.log("🚀 ~ handleGoogleResponse ~ result:", result)
 
       if (result.success) {
         // Check if user has brand profile or is new user
-        if (!result.hasBrandProfile) {
+        if (!result.hasBrand) {
           router.push("/onboarding");
         } else {
           router.push("/dashboard");

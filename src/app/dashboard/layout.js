@@ -60,28 +60,50 @@ export default function DashboardLayout({ children }) {
 
   const handleLogout = async () => {
     await logout();
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
   };
 
   // Check if current page should show the layout
   const shouldShowLayout = () => {
-    const excludedPaths = ["/auth", "/onboarding", "/"];
-    return (
-      !excludedPaths.some((path) => pathname.startsWith(path)) &&
-      pathname !== "/"
+    const excludedPaths = ["/auth", "/onboarding"];
+    const isExcludedPath = excludedPaths.some((path) =>
+      pathname.startsWith(path)
     );
+    const isRootPath = pathname === "/";
+
+    return !isExcludedPath && !isRootPath;
   };
 
   // If not authenticated or loading, don't show layout
-  if (isLoading || !shouldShowLayout()) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="loading-spinner mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+//   // If user is authenticated but has no brand and not on onboarding page, redirect
+//   if (user && !hasBrand && pathname !== "/onboarding" && shouldShowLayout()) {
+//     if (typeof window !== "undefined") {
+//       window.location.href = "/onboarding";
+//     }
+//     return null;
+//   }
+
+  // Don't show layout for excluded paths
+  if (!shouldShowLayout()) {
     return children;
   }
 
-  // If authenticated but no brand profile, redirect to onboarding
-  if (!hasBrand && pathname !== "/onboarding") {
-    if (typeof window !== "undefined") {
-      window.location.href = "/onboarding";
-    }
-    return null;
+  // Don't show layout if not authenticated
+  if (!user) {
+    return children;
   }
 
   return (

@@ -408,7 +408,7 @@ export default function EnhancedBrandManagementPage() {
           </div>
 
           {/* AI-Generated Overview */}
-          {brand.ai_overview && (
+          {brand.ai_generated_overview && (
             <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-xl border border-primary-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -429,41 +429,44 @@ export default function EnhancedBrandManagementPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column */}
                 <div className="space-y-4">
-                  {brand.ai_overview.overview && (
+                  {brand.ai_generated_overview.overview && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                         <Eye className="w-4 h-4 mr-2 text-primary-600" />
                         Brand Overview
                       </h4>
                       <p className="text-gray-700 text-sm leading-relaxed">
-                        {brand.ai_overview.overview}
+                        {brand.ai_generated_overview.overview}
                       </p>
                     </div>
                   )}
 
-                  {brand.ai_overview.market_position && (
+                  {brand.ai_generated_overview.market_position && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                         <Award className="w-4 h-4 mr-2 text-primary-600" />
                         Market Position
                       </h4>
                       <p className="text-gray-700 text-sm leading-relaxed">
-                        {brand.ai_overview.market_position}
+                        {brand.ai_generated_overview.market_position}
                       </p>
                     </div>
                   )}
 
-                  {brand.ai_overview.target_audience && (
+                  {brand.ai_generated_overview.target_audience && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                         <Users className="w-4 h-4 mr-2 text-primary-600" />
                         Target Audience
                       </h4>
                       <p className="text-gray-700 text-sm mb-2">
-                        {brand.ai_overview.target_audience.demographics}
+                        {
+                          brand.ai_generated_overview.target_audience
+                            .demographics
+                        }
                       </p>
                       <div className="flex flex-wrap gap-1">
-                        {brand.ai_overview.target_audience.interests?.map(
+                        {brand.ai_generated_overview.target_audience.interests?.map(
                           (interest, index) => (
                             <span
                               key={index}
@@ -480,14 +483,14 @@ export default function EnhancedBrandManagementPage() {
 
                 {/* Right Column */}
                 <div className="space-y-4">
-                  {brand.ai_overview.products_services && (
+                  {brand.ai_generated_overview.products_services && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                         <Briefcase className="w-4 h-4 mr-2 text-primary-600" />
                         Products & Services
                       </h4>
                       <div className="flex flex-wrap gap-1">
-                        {brand.ai_overview.products_services.map(
+                        {brand.ai_generated_overview.products_services.map(
                           (service, index) => (
                             <span
                               key={index}
@@ -501,28 +504,33 @@ export default function EnhancedBrandManagementPage() {
                     </div>
                   )}
 
-                  {brand.ai_overview.brand_personality && (
+                  {brand.ai_generated_overview.brand_personality && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                         <Lightbulb className="w-4 h-4 mr-2 text-primary-600" />
                         Brand Personality
                       </h4>
                       <div className="text-sm text-gray-700 space-y-1">
-                        {brand.ai_overview.brand_personality.tone && (
+                        {brand.ai_generated_overview.brand_personality.tone && (
                           <p>
                             <strong>Tone:</strong>{" "}
-                            {brand.ai_overview.brand_personality.tone}
+                            {brand.ai_generated_overview.brand_personality.tone}
                           </p>
                         )}
-                        {brand.ai_overview.brand_personality.style && (
+                        {brand.ai_generated_overview.brand_personality
+                          .style && (
                           <p>
                             <strong>Style:</strong>{" "}
-                            {brand.ai_overview.brand_personality.style}
+                            {
+                              brand.ai_generated_overview.brand_personality
+                                .style
+                            }
                           </p>
                         )}
-                        {brand.ai_overview.brand_personality.values && (
+                        {brand.ai_generated_overview.brand_personality
+                          .values && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {brand.ai_overview.brand_personality.values.map(
+                            {brand.ai_generated_overview.brand_personality.values.map(
                               (value, index) => (
                                 <span
                                   key={index}
@@ -538,7 +546,7 @@ export default function EnhancedBrandManagementPage() {
                     </div>
                   )}
 
-                  {brand.ai_overview.collaboration_fit && (
+                  {brand.ai_generated_overview.collaboration_fit && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                         <Zap className="w-4 h-4 mr-2 text-primary-600" />
@@ -547,17 +555,20 @@ export default function EnhancedBrandManagementPage() {
                       <div className="text-sm text-gray-700">
                         <p className="mb-2">
                           <strong>Ideal Creators:</strong>{" "}
-                          {brand.ai_overview.collaboration_fit.ideal_creators}
+                          {
+                            brand.ai_generated_overview.collaboration_fit
+                              .ideal_creators
+                          }
                         </p>
                         <div className="space-y-2">
-                          {brand.ai_overview.collaboration_fit
+                          {brand.ai_generated_overview.collaboration_fit
                             .content_types && (
                             <div>
                               <span className="font-medium">
                                 Content Types:
                               </span>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {brand.ai_overview.collaboration_fit.content_types.map(
+                                {brand.ai_generated_overview.collaboration_fit.content_types.map(
                                   (type, index) => (
                                     <span
                                       key={index}
@@ -570,14 +581,14 @@ export default function EnhancedBrandManagementPage() {
                               </div>
                             </div>
                           )}
-                          {brand.ai_overview.collaboration_fit
+                          {brand.ai_generated_overview.collaboration_fit
                             .campaign_styles && (
                             <div>
                               <span className="font-medium">
                                 Campaign Styles:
                               </span>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {brand.ai_overview.collaboration_fit.campaign_styles.map(
+                                {brand.ai_generated_overview.collaboration_fit.campaign_styles.map(
                                   (style, index) => (
                                     <span
                                       key={index}
@@ -598,18 +609,18 @@ export default function EnhancedBrandManagementPage() {
               </div>
 
               {/* Key Messaging & Competitive Advantages */}
-              {(brand.ai_overview.key_messaging ||
-                brand.ai_overview.competitive_advantages) && (
+              {(brand.ai_generated_overview.key_messaging ||
+                brand.ai_generated_overview.competitive_advantages) && (
                 <div className="mt-6 pt-6 border-t border-primary-200">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {brand.ai_overview.key_messaging && (
+                    {brand.ai_generated_overview.key_messaging && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                           <MessageSquare className="w-4 h-4 mr-2 text-primary-600" />
                           Key Messaging
                         </h4>
                         <ul className="space-y-1">
-                          {brand.ai_overview.key_messaging.map(
+                          {brand.ai_generated_overview.key_messaging.map(
                             (message, index) => (
                               <li key={index} className="text-sm text-gray-700">
                                 • {message}
@@ -620,14 +631,14 @@ export default function EnhancedBrandManagementPage() {
                       </div>
                     )}
 
-                    {brand.ai_overview.competitive_advantages && (
+                    {brand.ai_generated_overview.competitive_advantages && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                           <Target className="w-4 h-4 mr-2 text-primary-600" />
                           Competitive Advantages
                         </h4>
                         <ul className="space-y-1">
-                          {brand.ai_overview.competitive_advantages.map(
+                          {brand.ai_generated_overview.competitive_advantages.map(
                             (advantage, index) => (
                               <li key={index} className="text-sm text-gray-700">
                                 • {advantage}
@@ -637,6 +648,32 @@ export default function EnhancedBrandManagementPage() {
                         </ul>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {brand.ai_generated_overview.confidence_score && (
+                <div className="mt-4 p-3 bg-white/70 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      AI Confidence Score
+                    </span>
+                    <span className="text-sm font-bold text-primary-600">
+                      {(
+                        brand.ai_generated_overview.confidence_score * 100
+                      ).toFixed(0)}
+                      %
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div
+                      className="bg-gradient-to-r from-primary-600 to-secondary-600 h-2 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${
+                          brand.ai_generated_overview.confidence_score * 100
+                        }%`,
+                      }}
+                    />
                   </div>
                 </div>
               )}

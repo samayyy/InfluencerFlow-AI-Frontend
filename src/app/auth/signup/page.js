@@ -33,6 +33,8 @@ export default function SignupPage() {
   useEffect(() => {
     if (isAuthenticated) {
       // Check if user has brand profile
+      console.log("🚀 ~ useEffect ~ isAuthenticated:", isAuthenticated);
+      console.log("🚀 ~ useEffect ~ hasBrand:", hasBrand);
       if (hasBrand) {
         router.push("/dashboard");
       } else {
@@ -112,6 +114,7 @@ export default function SignupPage() {
     try {
       const deviceInfo = getDeviceInfo();
       const result = await loginWithGoogle(response.credential, deviceInfo);
+      console.log("🚀 ~ handleGoogleResponse ~ result:", result);
 
       if (result.success) {
         // Always go to onboarding for new signups

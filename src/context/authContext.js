@@ -43,9 +43,7 @@ const authReducer = (state, action) => {
         isAuthenticated: true,
         isLoading: false,
         error: null,
-        hasBrand: !!(
-          action.payload.user?.brand_id && action.payload.user?.brand_name
-        ),
+        hasBrand: action.payload.hasBrand || false,
       };
 
     case AUTH_ACTIONS.AUTH_FAILURE:
@@ -125,13 +123,14 @@ export const AuthProvider = ({ children }) => {
 
         // Check if user has brand profile
         let hasBrandProfile = false;
-        if (userData.brand_id) {
+        if (userData.brand && userData.brand.id) {
           try {
             const brandResponse = await apiClient.brands.getProfile();
             const brandResult = apiUtils.handleResponse(brandResponse);
-            hasBrandProfile = brandResult.success;
+            hasBrandProfile = brandResult.success && brandResult.data?.brand;
           } catch (brandError) {
             console.log("Brand profile not found");
+            hasBrandProfile = false;
           }
         }
 
@@ -141,8 +140,9 @@ export const AuthProvider = ({ children }) => {
         dispatch({
           type: AUTH_ACTIONS.AUTH_SUCCESS,
           payload: {
-            user: { ...userData, hasBrandProfile },
+            user: userData,
             tokens: { accessToken: token },
+            hasBrand: hasBrandProfile,
           },
         });
       } else {
@@ -176,9 +176,10 @@ export const AuthProvider = ({ children }) => {
           try {
             const brandResponse = await apiClient.brands.getProfile();
             const brandResult = apiUtils.handleResponse(brandResponse);
-            hasBrandProfile = brandResult.success;
+            hasBrandProfile = brandResult.success && brandResult.data?.brand;
           } catch (brandError) {
             console.log("Brand profile not found");
+            hasBrandProfile = false;
           }
         }
 
@@ -190,8 +191,9 @@ export const AuthProvider = ({ children }) => {
         dispatch({
           type: AUTH_ACTIONS.AUTH_SUCCESS,
           payload: {
-            user: { ...user, hasBrandProfile },
+            user,
             tokens,
+            hasBrand: hasBrandProfile,
           },
         });
 
@@ -226,41 +228,11 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // Clear local storage and state regardless of API call success
       apiUtils.removeAuthToken();
+
+    //   redirect to home page
+
+
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
-    }
-  };
-
-  // Refresh tokens
-  const refreshTokens = async () => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new Error("No refresh token available");
-      }
-
-      const response = await apiClient.auth.refreshToken(refreshToken);
-      const result = apiUtils.handleResponse(response);
-
-      if (result.success) {
-        const { accessToken, user } = result.data;
-
-        apiUtils.setAuthToken(accessToken);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        dispatch({
-          type: AUTH_ACTIONS.UPDATE_USER,
-          payload: user,
-        });
-
-        return { success: true };
-      } else {
-        // Refresh failed, logout user
-        await logout();
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      await logout();
-      return { success: false, error: "Token refresh failed" };
     }
   };
 
@@ -282,46 +254,6 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  // Get user sessions
-  const getUserSessions = async () => {
-    try {
-      const response = await apiClient.auth.getSessions();
-      return apiUtils.handleResponse(response);
-    } catch (error) {
-      return apiUtils.handleError(error);
-    }
-  };
-
-  // Revoke specific session
-  const revokeSession = async (sessionId) => {
-    try {
-      const response = await apiClient.auth.revokeSession(sessionId);
-      return apiUtils.handleResponse(response);
-    } catch (error) {
-      return apiUtils.handleError(error);
-    }
-  };
-
-  // Check if user has brand profile
-  const hasBrandProfile = () => {
-    return state.hasBrand && state.user?.brand_id && state.user?.brand_name;
-  };
-
-  // Check user role
-  const hasRole = (role) => {
-    return state.user?.role === role;
-  };
-
-  // Check if user is admin
-  const isAdmin = () => {
-    return hasRole("admin");
-  };
-
-  // Check if user is brand owner
-  const isBrand = () => {
-    return hasRole("brand") || hasBrandProfile();
-  };
-
   // Clear error
   const clearError = () => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
@@ -340,18 +272,15 @@ export const AuthProvider = ({ children }) => {
     // Actions
     loginWithGoogle,
     logout,
-    refreshTokens,
     updateUser,
-    getUserSessions,
-    revokeSession,
     clearError,
     setBrandStatus,
 
     // Utility functions
-    hasBrandProfile,
-    hasRole,
-    isAdmin,
-    isBrand,
+    hasBrandProfile: () => state.hasBrand,
+    hasRole: (role) => state.user?.role === role,
+    isAdmin: () => state.user?.role === "admin",
+    isBrand: () => state.user?.role === "brand" || state.hasBrand,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -364,61 +293,6 @@ export const useAuth = () => {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
-
-// HOC for protected routes
-export const withAuth = (WrappedComponent, options = {}) => {
-  const {
-    requireBrand = false,
-    requireAdmin = false,
-    redirectTo = "/auth/login",
-  } = options;
-
-  return function AuthProtectedComponent(props) {
-    const { isAuthenticated, isLoading, user, isBrand, isAdmin, hasBrand } =
-      useAuth();
-
-    useEffect(() => {
-      if (!isLoading) {
-        if (!isAuthenticated) {
-          window.location.href = redirectTo;
-          return;
-        }
-
-        if (requireBrand && !hasBrand) {
-          window.location.href = "/onboarding";
-          return;
-        }
-
-        if (requireAdmin && !isAdmin()) {
-          window.location.href = "/dashboard";
-          return;
-        }
-      }
-    }, [isAuthenticated, isLoading, user, hasBrand]);
-
-    if (isLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="loading-spinner"></div>
-        </div>
-      );
-    }
-
-    if (!isAuthenticated) {
-      return null;
-    }
-
-    if (requireBrand && !hasBrand) {
-      return null;
-    }
-
-    if (requireAdmin && !isAdmin()) {
-      return null;
-    }
-
-    return <WrappedComponent {...props} />;
-  };
 };
 
 export default AuthContext;

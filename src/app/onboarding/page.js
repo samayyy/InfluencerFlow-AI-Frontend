@@ -230,8 +230,10 @@ export default function EnhancedOnboardingPage() {
         // Update brand status
         setBrandStatus(true);
 
-        // Redirect directly to product creation
-        router.push("/products/create?onboarding=true");
+        // Success message and redirect to products page
+        setTimeout(() => {
+          router.push("/products/create?onboarding=true");
+        }, 1000);
       } else {
         setError(result.error || "Failed to create brand profile");
       }
