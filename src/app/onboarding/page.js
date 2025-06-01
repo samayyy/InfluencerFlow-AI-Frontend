@@ -16,10 +16,17 @@ import {
   CheckCircle,
   Loader2,
   AlertCircle,
+  Target,
+  TrendingUp,
+  Lightbulb,
+  Eye,
+  Edit,
+  Brain,
+  Zap,
 } from "lucide-react";
 import apiClient, { apiUtils } from "../../lib/api";
 
-export default function OnboardingPage() {
+export default function EnhancedOnboardingPage() {
   const router = useRouter();
   const {
     user,
@@ -32,6 +39,7 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
 
   const [formData, setFormData] = useState({
     brand_name: "",
@@ -48,7 +56,7 @@ export default function OnboardingPage() {
     },
   });
 
-  const [brandPreview, setBrandPreview] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -107,6 +115,50 @@ export default function OnboardingPage() {
     setError("");
   };
 
+  const analyzeWebsite = async () => {
+    if (!formData.website_url.trim()) return;
+
+    setIsAnalyzing(true);
+    try {
+      const response = await apiClient.brands.analyzeWebsite(
+        formData.website_url,
+        formData.brand_name
+      );
+      const result = apiUtils.handleResponse(response);
+
+      if (result.success) {
+        setAiAnalysis(result.data.ai_overview);
+        setShowAIAnalysis(true);
+
+        // Auto-fill form data from AI analysis
+        if (result.data.ai_overview?.industry) {
+          setFormData((prev) => ({
+            ...prev,
+            industry: result.data.ai_overview.industry,
+            description: result.data.ai_overview.overview || prev.description,
+          }));
+        }
+
+        // Auto-fill target audience if available
+        if (result.data.ai_overview?.target_audience) {
+          const targetAudience = result.data.ai_overview.target_audience;
+          setFormData((prev) => ({
+            ...prev,
+            target_audience: {
+              demographics: targetAudience.demographics || "",
+              interests: targetAudience.interests?.join(", ") || "",
+              age_range: targetAudience.behavior || "",
+            },
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Website analysis failed:", error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const validateStep = (step) => {
     switch (step) {
       case 1:
@@ -129,34 +181,6 @@ export default function OnboardingPage() {
     }
     setError("");
     return true;
-  };
-
-  const analyzeWebsite = async () => {
-    if (!formData.website_url.trim()) return;
-
-    setIsAnalyzing(true);
-    try {
-      const response = await apiClient.brands.analyzeWebsite(
-        formData.website_url,
-        formData.brand_name
-      );
-      const result = apiUtils.handleResponse(response);
-
-      if (result.success) {
-        setBrandPreview(result.data);
-        // Auto-fill description if available
-        if (result.data.ai_overview?.brand_overview) {
-          setFormData((prev) => ({
-            ...prev,
-            description: result.data.ai_overview.brand_overview,
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("Website analysis failed:", error);
-    } finally {
-      setIsAnalyzing(false);
-    }
   };
 
   const nextStep = () => {
@@ -189,6 +213,7 @@ export default function OnboardingPage() {
         monthly_budget: formData.monthly_budget
           ? Number(formData.monthly_budget)
           : undefined,
+        ai_analysis: aiAnalysis, // Include AI analysis in brand creation
       };
 
       const response = await apiClient.brands.create(brandData);
@@ -201,8 +226,8 @@ export default function OnboardingPage() {
           brand_name: result.data.brand.brand_name,
         });
 
-        // Redirect to dashboard
-        router.push("/dashboard");
+        // Redirect to product creation instead of dashboard
+        router.push("/products/create?onboarding=true");
       } else {
         setError(result.error || "Failed to create brand profile");
       }
@@ -223,13 +248,13 @@ export default function OnboardingPage() {
     },
     {
       number: 2,
-      title: "Company Details",
-      description: "Industry and company info",
+      title: "AI Analysis",
+      description: "Review AI insights",
     },
     {
       number: 3,
       title: "Preferences",
-      description: "Budget and audience targeting",
+      description: "Budget and targeting",
     },
   ];
 
@@ -246,7 +271,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-6">
@@ -258,7 +283,7 @@ export default function OnboardingPage() {
             Set up your brand profile
           </h1>
           <p className="text-xl text-gray-600">
-            Let's get you started with InfluencerFlow AI
+            Let AI help you create the perfect brand profile
           </p>
         </div>
 
@@ -329,7 +354,7 @@ export default function OnboardingPage() {
                   Brand Basics
                 </h2>
                 <p className="text-gray-600">
-                  Tell us about your brand and website
+                  Tell us about your brand and we'll analyze it with AI
                 </p>
               </div>
 
@@ -353,46 +378,184 @@ export default function OnboardingPage() {
                     handleInputChange("website_url", e.target.value)
                   }
                   icon={Globe}
-                  helperText="We'll analyze your website to better understand your brand"
+                  helperText="We'll analyze your website to understand your brand better"
                   containerClassName="flex-1"
                 />
 
                 <div className="pt-8">
                   <Button
-                    variant="outline"
+                    variant="gradient"
                     onClick={analyzeWebsite}
                     loading={isAnalyzing}
-                    disabled={!formData.website_url.trim()}
+                    disabled={
+                      !formData.website_url.trim() ||
+                      !formData.brand_name.trim()
+                    }
+                    icon={Brain}
                   >
-                    {isAnalyzing ? "Analyzing..." : "Analyze"}
+                    {isAnalyzing ? "Analyzing..." : "AI Analyze"}
                   </Button>
                 </div>
               </div>
 
-              {brandPreview && (
-                <div className="p-4 bg-primary-50 rounded-lg animate-fade-in">
-                  <h4 className="font-medium text-primary-900 mb-2">
-                    Website Analysis Complete
-                  </h4>
-                  <p className="text-sm text-primary-700">
-                    We've analyzed your website and will use this information to
-                    enhance your brand profile.
-                  </p>
+              {/* AI Analysis Results */}
+              {showAIAnalysis && aiAnalysis && (
+                <div className="mt-8 p-6 bg-gradient-to-br from-primary-50 to-secondary-50 rounded-xl border border-primary-200 animate-fade-in">
+                  <div className="flex items-center mb-4">
+                    <Sparkles className="w-6 h-6 text-primary-600 mr-2" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      AI Analysis Complete
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Overview */}
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <Eye className="w-4 h-4 mr-2" />
+                          Brand Overview
+                        </h4>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {aiAnalysis.overview}
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <Target className="w-4 h-4 mr-2" />
+                          Industry & Position
+                        </h4>
+                        <p className="text-sm text-gray-700">
+                          <strong>Industry:</strong> {aiAnalysis.industry}
+                        </p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          {aiAnalysis.market_position}
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <Lightbulb className="w-4 h-4 mr-2" />
+                          Brand Personality
+                        </h4>
+                        <div className="text-sm text-gray-700">
+                          <p>
+                            <strong>Tone:</strong>{" "}
+                            {aiAnalysis.brand_personality?.tone}
+                          </p>
+                          <p>
+                            <strong>Style:</strong>{" "}
+                            {aiAnalysis.brand_personality?.style}
+                          </p>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {aiAnalysis.brand_personality?.values?.map(
+                              (value, index) => (
+                                <span
+                                  key={index}
+                                  className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full"
+                                >
+                                  {value}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Services & Audience */}
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          Products & Services
+                        </h4>
+                        <div className="flex flex-wrap gap-1">
+                          {aiAnalysis.products_services?.map(
+                            (service, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                              >
+                                {service}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <Users className="w-4 h-4 mr-2" />
+                          Target Audience
+                        </h4>
+                        <p className="text-sm text-gray-700 mb-2">
+                          {aiAnalysis.target_audience?.demographics}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {aiAnalysis.target_audience?.interests?.map(
+                            (interest, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full"
+                              >
+                                {interest}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <Zap className="w-4 h-4 mr-2" />
+                          Creator Collaboration Fit
+                        </h4>
+                        <p className="text-sm text-gray-700 mb-2">
+                          <strong>Ideal Creators:</strong>{" "}
+                          {aiAnalysis.collaboration_fit?.ideal_creators}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {aiAnalysis.collaboration_fit?.content_types?.map(
+                            (type, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full"
+                              >
+                                {type}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-white/70 rounded-lg">
+                    <p className="text-sm text-gray-600 flex items-center">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                      Great! We've pre-filled your brand information based on
+                      this analysis. You can review and modify it in the next
+                      steps.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 2: Company Details */}
+          {/* Step 2: Company Details with AI Pre-filled Data */}
           {currentStep === 2 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center mb-8">
-                <Users className="w-12 h-12 text-primary-600 mx-auto mb-4" />
+                <Brain className="w-12 h-12 text-primary-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Company Details
+                  Review AI Analysis
                 </h2>
                 <p className="text-gray-600">
-                  Help us understand your business better
+                  Review and edit the information we've gathered about your
+                  brand
                 </p>
               </div>
 
@@ -415,6 +578,11 @@ export default function OnboardingPage() {
                     </option>
                   ))}
                 </select>
+                {aiAnalysis && (
+                  <p className="text-xs text-primary-600 mt-1">
+                    AI suggested: {aiAnalysis.industry}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -439,6 +607,11 @@ export default function OnboardingPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Brand Description
+                  {aiAnalysis && (
+                    <span className="text-xs text-primary-600 ml-2">
+                      (AI Enhanced)
+                    </span>
+                  )}
                 </label>
                 <textarea
                   rows={4}
@@ -453,7 +626,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Preferences */}
+          {/* Step 3: Preferences with AI-suggested audience */}
           {currentStep === 3 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center mb-8">
@@ -462,7 +635,7 @@ export default function OnboardingPage() {
                   Campaign Preferences
                 </h2>
                 <p className="text-gray-600">
-                  Set your budget and targeting preferences (optional)
+                  Set your budget and targeting preferences
                 </p>
               </div>
 
@@ -490,26 +663,32 @@ export default function OnboardingPage() {
                     }
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="INR">INR - Indian Rupee</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="INR">INR</option>
                   </select>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">
-                  Target Audience (Optional)
+                <h4 className="font-medium text-gray-900 flex items-center">
+                  <Users className="w-5 h-5 mr-2" />
+                  Target Audience
+                  {aiAnalysis && (
+                    <span className="text-xs text-primary-600 ml-2">
+                      (AI Enhanced)
+                    </span>
+                  )}
                 </h4>
 
                 <Input
-                  label="Age Range"
-                  placeholder="e.g., 18-35"
-                  value={formData.target_audience.age_range}
+                  label="Demographics"
+                  placeholder="e.g., young professionals, college students"
+                  value={formData.target_audience.demographics}
                   onChange={(e) =>
                     handleInputChange(
-                      "target_audience.age_range",
+                      "target_audience.demographics",
                       e.target.value
                     )
                   }
@@ -528,12 +707,12 @@ export default function OnboardingPage() {
                 />
 
                 <Input
-                  label="Demographics"
-                  placeholder="e.g., urban professionals, college students"
-                  value={formData.target_audience.demographics}
+                  label="Behavior & Preferences"
+                  placeholder="e.g., early adopters, value-conscious, premium buyers"
+                  value={formData.target_audience.age_range}
                   onChange={(e) =>
                     handleInputChange(
-                      "target_audience.demographics",
+                      "target_audience.age_range",
                       e.target.value
                     )
                   }
@@ -569,8 +748,8 @@ export default function OnboardingPage() {
         {/* Additional Info */}
         <div className="text-center text-gray-500 text-sm">
           <p>
-            Don't worry, you can always update these details later in your
-            dashboard settings.
+            After completing your brand profile, you'll be guided to add
+            products and create campaigns.
           </p>
         </div>
       </div>

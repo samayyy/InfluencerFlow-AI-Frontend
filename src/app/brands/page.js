@@ -20,10 +20,18 @@ import {
   DollarSign,
   Star,
   Loader2,
+  Brain,
+  Target,
+  Lightbulb,
+  Zap,
+  Eye,
+  Award,
+  MessageSquare,
+  Briefcase,
 } from "lucide-react";
 import apiClient, { apiUtils } from "../../lib/api.js";
 
-export default function BrandManagementPage() {
+export default function EnhancedBrandManagementPage() {
   const { user, updateUser } = useAuth();
   const [brand, setBrand] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,7 +131,6 @@ export default function BrandManagementPage() {
         setIsEditing(false);
         setSuccessMessage("Brand profile updated successfully!");
 
-        // Update user context if brand name changed
         if (editForm.brand_name !== brand.brand_name) {
           updateUser({ brand_name: editForm.brand_name });
         }
@@ -155,10 +162,10 @@ export default function BrandManagementPage() {
       const result = apiUtils.handleResponse(response);
 
       if (result.success) {
-        if (result.data.ai_overview?.brand_overview) {
+        if (result.data.ai_overview?.overview) {
           setEditForm((prev) => ({
             ...prev,
-            description: result.data.ai_overview.brand_overview,
+            description: result.data.ai_overview.overview,
           }));
         }
         setSuccessMessage("Website analysis complete! Description updated.");
@@ -181,7 +188,6 @@ export default function BrandManagementPage() {
       const result = apiUtils.handleResponse(response);
 
       if (result.success) {
-        // Refresh brand data
         await fetchBrandProfile();
         setSuccessMessage("AI overview regenerated successfully!");
         setTimeout(() => setSuccessMessage(""), 3000);
@@ -306,9 +312,9 @@ export default function BrandManagementPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Main Brand Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           {/* Brand Overview Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-start justify-between mb-6">
@@ -404,10 +410,10 @@ export default function BrandManagementPage() {
           {/* AI-Generated Overview */}
           {brand.ai_overview && (
             <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-xl border border-primary-200 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Sparkles className="w-5 h-5 text-primary-600 mr-2" />
-                  AI-Generated Brand Overview
+                  <Brain className="w-6 h-6 text-primary-600 mr-2" />
+                  AI Brand Analysis
                 </h3>
                 <Button
                   variant="outline"
@@ -420,36 +426,218 @@ export default function BrandManagementPage() {
                 </Button>
               </div>
 
-              {brand.ai_overview.brand_overview && (
-                <div className="mb-4">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Brand Overview
-                  </h4>
-                  <p className="text-gray-700 leading-relaxed">
-                    {brand.ai_overview.brand_overview}
-                  </p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  {brand.ai_overview.overview && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <Eye className="w-4 h-4 mr-2 text-primary-600" />
+                        Brand Overview
+                      </h4>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        {brand.ai_overview.overview}
+                      </p>
+                    </div>
+                  )}
 
-              {brand.ai_overview.target_audience && (
-                <div className="mb-4">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Target Audience
-                  </h4>
-                  <p className="text-gray-700 leading-relaxed">
-                    {brand.ai_overview.target_audience}
-                  </p>
-                </div>
-              )}
+                  {brand.ai_overview.market_position && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <Award className="w-4 h-4 mr-2 text-primary-600" />
+                        Market Position
+                      </h4>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        {brand.ai_overview.market_position}
+                      </p>
+                    </div>
+                  )}
 
-              {brand.ai_overview.brand_personality && (
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Brand Personality
-                  </h4>
-                  <p className="text-gray-700 leading-relaxed">
-                    {brand.ai_overview.brand_personality}
-                  </p>
+                  {brand.ai_overview.target_audience && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <Users className="w-4 h-4 mr-2 text-primary-600" />
+                        Target Audience
+                      </h4>
+                      <p className="text-gray-700 text-sm mb-2">
+                        {brand.ai_overview.target_audience.demographics}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {brand.ai_overview.target_audience.interests?.map(
+                          (interest, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                            >
+                              {interest}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  {brand.ai_overview.products_services && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <Briefcase className="w-4 h-4 mr-2 text-primary-600" />
+                        Products & Services
+                      </h4>
+                      <div className="flex flex-wrap gap-1">
+                        {brand.ai_overview.products_services.map(
+                          (service, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full"
+                            >
+                              {service}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {brand.ai_overview.brand_personality && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <Lightbulb className="w-4 h-4 mr-2 text-primary-600" />
+                        Brand Personality
+                      </h4>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        {brand.ai_overview.brand_personality.tone && (
+                          <p>
+                            <strong>Tone:</strong>{" "}
+                            {brand.ai_overview.brand_personality.tone}
+                          </p>
+                        )}
+                        {brand.ai_overview.brand_personality.style && (
+                          <p>
+                            <strong>Style:</strong>{" "}
+                            {brand.ai_overview.brand_personality.style}
+                          </p>
+                        )}
+                        {brand.ai_overview.brand_personality.values && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {brand.ai_overview.brand_personality.values.map(
+                              (value, index) => (
+                                <span
+                                  key={index}
+                                  className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full"
+                                >
+                                  {value}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {brand.ai_overview.collaboration_fit && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                        <Zap className="w-4 h-4 mr-2 text-primary-600" />
+                        Creator Collaboration Fit
+                      </h4>
+                      <div className="text-sm text-gray-700">
+                        <p className="mb-2">
+                          <strong>Ideal Creators:</strong>{" "}
+                          {brand.ai_overview.collaboration_fit.ideal_creators}
+                        </p>
+                        <div className="space-y-2">
+                          {brand.ai_overview.collaboration_fit
+                            .content_types && (
+                            <div>
+                              <span className="font-medium">
+                                Content Types:
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {brand.ai_overview.collaboration_fit.content_types.map(
+                                  (type, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
+                                    >
+                                      {type}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {brand.ai_overview.collaboration_fit
+                            .campaign_styles && (
+                            <div>
+                              <span className="font-medium">
+                                Campaign Styles:
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {brand.ai_overview.collaboration_fit.campaign_styles.map(
+                                  (style, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded-full"
+                                    >
+                                      {style}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Key Messaging & Competitive Advantages */}
+              {(brand.ai_overview.key_messaging ||
+                brand.ai_overview.competitive_advantages) && (
+                <div className="mt-6 pt-6 border-t border-primary-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {brand.ai_overview.key_messaging && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <MessageSquare className="w-4 h-4 mr-2 text-primary-600" />
+                          Key Messaging
+                        </h4>
+                        <ul className="space-y-1">
+                          {brand.ai_overview.key_messaging.map(
+                            (message, index) => (
+                              <li key={index} className="text-sm text-gray-700">
+                                • {message}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {brand.ai_overview.competitive_advantages && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                          <Target className="w-4 h-4 mr-2 text-primary-600" />
+                          Competitive Advantages
+                        </h4>
+                        <ul className="space-y-1">
+                          {brand.ai_overview.competitive_advantages.map(
+                            (advantage, index) => (
+                              <li key={index} className="text-sm text-gray-700">
+                                • {advantage}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

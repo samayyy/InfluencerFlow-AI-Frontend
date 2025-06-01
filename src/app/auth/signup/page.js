@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../context/authContext";
-import Button from "../../components/common/Button";
+import Button from "../../../components/common/Button";
 import {
   Sparkles,
   ArrowLeft,
