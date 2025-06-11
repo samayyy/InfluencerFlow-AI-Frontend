@@ -181,10 +181,10 @@ export default function LandingPage() {
             >
               <Link
                 href="/auth/signup"
-                className="btn-primary text-lg px-8 py-4 animate-glow"
+                className="btn-primary flex text-lg px-8 py-4 animate-glow"
               >
                 Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-5 h-5 ml-2 mt-1" />
               </Link>
               <button className="flex items-center text-primary-600 hover:text-primary-700 font-medium">
                 <PlayCircle className="w-6 h-6 mr-2" />
@@ -214,7 +214,7 @@ export default function LandingPage() {
 
         <div className="absolute top-1/2 left-10 w-20 h-20 bg-primary-200 rounded-full opacity-20 animate-float"></div>
         <div className="absolute top-1/3 right-10 w-16 h-16 bg-secondary-200 rounded-full opacity-20 animate-float-delayed"></div>
-        <div className="absolute bottom-1/4 left-1/4 w-12 h-12 bg-primary-300 rounded-full opacity-30 animate-pulse-slow"></div>
+        {/* <div className="absolute bottom-1/4 left-1/4 w-12 h-12 bg-primary-300 rounded-full opacity-30 animate-pulse-slow"></div> */}
       </section>
 
       {/* Features Section */}
