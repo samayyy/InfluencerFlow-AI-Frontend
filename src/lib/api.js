@@ -240,12 +240,81 @@ class ApiClient {
     previewInfluencerMatch: (previewData) =>
       api.post("/campaigns/preview-influencer-match", previewData),
     getStats: () => api.get("/campaigns/stats"),
+    // Form-based creation with integrated product fields
+    createForm: (campaignData) =>
+      api.post("/campaigns/create/form", campaignData),
+
+    // Document-based creation
+    createFromDocument: (formData) =>
+      api.post("/campaigns/create/document", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }),
+
+    // Query-based creation
+    createFromQuery: (queryData) =>
+      api.post("/campaigns/create/query", queryData),
+
+    // Preview query extraction
+    previewQuery: (queryData) =>
+      api.post("/campaigns/preview/query", queryData),
+
+    // Product URL analysis
+    analyzeProductUrl: (productData) =>
+      api.post("/campaigns/analyze-product", productData),
+
+    // Get campaign with enhanced product info
+    getEnhanced: (campaignId) =>
+      api.get(`/campaigns/${campaignId}?enhanced=true`),
+
+    // Update campaign with product integration
+    updateEnhanced: (campaignId, updateData) =>
+      api.put(`/campaigns/${campaignId}/enhanced`, updateData),
 
     // Admin APIs
     admin: {
       getAll: (params) => api.get("/campaigns/admin/all", { params }),
       getStats: () => api.get("/campaigns/admin/stats"),
     },
+  };
+
+  campaignIntelligence = {
+    // Extract campaign data from text
+    extractFromText: (textData) =>
+      api.post("/campaigns/intelligence/extract-text", textData),
+
+    // Enhance campaign data with AI
+    enhanceData: (campaignData) =>
+      api.post("/campaigns/intelligence/enhance", campaignData),
+
+    // Get campaign creation suggestions
+    getSuggestions: (params) =>
+      api.get("/campaigns/intelligence/suggestions", { params }),
+
+    // Validate extracted campaign data
+    validateData: (campaignData) =>
+      api.post("/campaigns/intelligence/validate", campaignData),
+  };
+
+  // Product Analysis APIs (separate from products since these are for campaign integration)
+  productAnalysis = {
+    // Analyze product for campaign
+    analyzeForCampaign: (productUrl, productName) =>
+      api.post("/campaigns/product-analysis", {
+        product_url: productUrl,
+        product_name: productName,
+      }),
+
+    // Get cached analysis
+    getCachedAnalysis: (productUrl) =>
+      api.get("/campaigns/product-analysis/cached", {
+        params: { product_url: productUrl },
+      }),
+
+    // Batch analyze multiple products
+    batchAnalyze: (products) =>
+      api.post("/campaigns/product-analysis/batch", { products }),
   };
 
   // Calling APIs (Twilio & ElevenLabs)
