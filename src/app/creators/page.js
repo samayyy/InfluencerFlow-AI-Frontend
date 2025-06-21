@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/authContext";
 import { useSearchParams } from "next/navigation";
@@ -50,6 +50,10 @@ import apiClient, { apiUtils } from "../../lib/api";
 export default function EnhancedCreatorSearchPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+
+  // Add hydration flag to prevent SSR/client mismatches
+  const [isHydrated, setIsHydrated] = useState(false);
+
   const [creators, setCreators] = useState([]);
   const [filteredCreators, setFilteredCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,8 +71,11 @@ export default function EnhancedCreatorSearchPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Get product context if coming from product page
-  const contextProductId = searchParams?.get("product");
+  // Memoize the context product ID to prevent hydration issues
+  const contextProductId = useMemo(() => {
+    if (!isHydrated) return null;
+    return searchParams?.get("product");
+  }, [searchParams, isHydrated]);
 
   const [filters, setFilters] = useState({
     niche: "",
@@ -90,7 +97,7 @@ export default function EnhancedCreatorSearchPage() {
   });
 
   const [sortBy, setSortBy] = useState("relevance");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [viewMode, setViewMode] = useState("grid");
 
   // Contact form state
   const [contactForm, setContactForm] = useState({
@@ -196,11 +203,21 @@ export default function EnhancedCreatorSearchPage() {
     "dance_videos",
   ];
 
+  // Fixed hydration effect
   useEffect(() => {
-    // Load recent searches from localStorage
-    const saved = localStorage.getItem("creator_search_history");
-    if (saved) {
-      setSearchHistory(JSON.parse(saved));
+    setIsHydrated(true);
+
+    // Only access localStorage after hydration
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("creator_search_history");
+      if (saved) {
+        try {
+          setSearchHistory(JSON.parse(saved));
+        } catch (error) {
+          console.error("Failed to parse search history:", error);
+          localStorage.removeItem("creator_search_history");
+        }
+      }
     }
 
     // Initial load of creators
@@ -212,11 +229,20 @@ export default function EnhancedCreatorSearchPage() {
     applyFiltersAndSort();
   }, [creators, filters, sortBy, searchQuery]);
 
+  // Fixed timestamp generation to prevent hydration issues
+  const generateTimestamp = () => {
+    // Use a more predictable timestamp generation
+    return new Date().getTime();
+  };
+
   const saveSearchToHistory = (query, type = "text") => {
+    // Only save to history if we're on the client side
+    if (!isHydrated || typeof window === "undefined") return;
+
     const newSearch = {
       query,
       type,
-      timestamp: Date.now(),
+      timestamp: generateTimestamp(), // Use consistent timestamp generation
       filters: { ...filters },
     };
 
@@ -224,8 +250,14 @@ export default function EnhancedCreatorSearchPage() {
       newSearch,
       ...searchHistory.filter((s) => s.query !== query),
     ].slice(0, 10);
+
     setSearchHistory(updated);
-    localStorage.setItem("creator_search_history", JSON.stringify(updated));
+
+    try {
+      localStorage.setItem("creator_search_history", JSON.stringify(updated));
+    } catch (error) {
+      console.error("Failed to save search history:", error);
+    }
   };
 
   const fetchCreators = async () => {
@@ -491,13 +523,29 @@ export default function EnhancedCreatorSearchPage() {
     return platformObj ? platformObj.icon : Users;
   };
 
+  // Fixed avatar URL generation to prevent hydration issues
+  const getAvatarUrl = (creator) => {
+    if (creator.profile_image_url) {
+      return creator.profile_image_url;
+    }
+
+    // Use a more stable fallback that doesn't depend on encoding
+    const name = creator.creator_name || "Creator";
+    const cleanName = name.replace(/[^a-zA-Z0-9]/g, "");
+    return `https://ui-avatars.com/api/?name=${cleanName}&background=3B82F6&color=fff`;
+  };
+
   const handleContactCreator = (creator) => {
     setSelectedCreator(creator);
     setContactForm({
-      subject: `Collaboration Opportunity from ${user?.brand_name}`,
+      subject: `Collaboration Opportunity from ${
+        user?.brand_name || "Our Brand"
+      }`,
       message: `Hi ${creator.creator_name},
 
-I hope this message finds you well! I'm reaching out from ${user?.brand_name} regarding a potential collaboration opportunity.
+I hope this message finds you well! I'm reaching out from ${
+        user?.brand_name || "our brand"
+      } regarding a potential collaboration opportunity.
 
 We believe your content and audience would be a perfect fit for our brand, and we'd love to discuss how we can work together to create amazing content.
 
@@ -506,8 +554,8 @@ I'd be happy to provide more details about the collaboration and answer any ques
 Looking forward to hearing from you!
 
 Best regards,
-${user?.name}
-${user?.brand_name}`,
+${user?.name || ""}
+${user?.brand_name || ""}`,
       campaign_id: "",
     });
     setShowContactModal(true);
@@ -521,14 +569,16 @@ ${user?.brand_name}`,
         phone_number: "+919167924380",
       };
 
-      // Check for campaign context from URL parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const contextCampaignId = urlParams.get("campaign_id");
+      // Check for campaign context from URL parameters - only after hydration
+      if (isHydrated && typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const contextCampaignId = urlParams.get("campaign_id");
 
-      // Add campaign_id and notes only if available
-      if (contextCampaignId) {
-        callData.campaign_id = contextCampaignId;
-        callData.notes = `Campaign collaboration inquiry for campaign ${contextCampaignId}`;
+        // Add campaign_id and notes only if available
+        if (contextCampaignId) {
+          callData.campaign_id = contextCampaignId;
+          callData.notes = `Campaign collaboration inquiry for campaign ${contextCampaignId}`;
+        }
       }
 
       const response = await apiClient.calling.initiate(callData);
@@ -655,6 +705,30 @@ ${user?.brand_name}`,
     a.download = `creators_search_${Date.now()}.csv`;
     a.click();
   };
+
+  // Don't render dynamic content until hydrated
+  if (!isHydrated) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
+            <Users className="w-8 h-8 mr-3" />
+            Creator Discovery
+          </h1>
+          <p className="text-gray-600">
+            Find the perfect creators for your brand using AI-powered search and
+            advanced filters
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-600" />
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -1097,7 +1171,7 @@ ${user?.brand_name}`,
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="loading-spinner mx-auto mb-4"></div>
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-600" />
             <p className="text-gray-600">Loading creators...</p>
           </div>
         </div>
@@ -1160,14 +1234,12 @@ ${user?.brand_name}`,
                     />
 
                     <img
-                      src={
-                        creator.profile_image_url ||
-                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          creator.creator_name
-                        )}&background=3B82F6&color=fff`
-                      }
+                      src={getAvatarUrl(creator)}
                       alt={creator.creator_name}
                       className="w-16 h-16 rounded-full"
+                      onError={(e) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=Creator&background=3B82F6&color=fff`;
+                      }}
                     />
 
                     <div className="flex-1 min-w-0">
@@ -1191,9 +1263,9 @@ ${user?.brand_name}`,
                         <PlatformIcon className="w-4 h-4 mr-1" />
                         {creator.username ||
                           "@" +
-                            creator.creator_name
+                            (creator.creator_name || "creator")
                               .toLowerCase()
-                              .replace(/\s+/g, "")}
+                              .replace(/[^a-zA-Z0-9]/g, "")}
                         {creator.niche && (
                           <>
                             <span className="mx-2">•</span>
@@ -1302,14 +1374,12 @@ ${user?.brand_name}`,
                         className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mr-3"
                       />
                       <img
-                        src={
-                          creator.profile_image_url ||
-                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            creator.creator_name
-                          )}&background=3B82F6&color=fff`
-                        }
+                        src={getAvatarUrl(creator)}
                         alt={creator.creator_name}
                         className="w-12 h-12 rounded-full mr-3"
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=Creator&background=3B82F6&color=fff`;
+                        }}
                       />
                       <div>
                         <div className="flex items-center">
@@ -1324,9 +1394,9 @@ ${user?.brand_name}`,
                           <PlatformIcon className="w-4 h-4 mr-1" />
                           {creator.username ||
                             "@" +
-                              creator.creator_name
+                              (creator.creator_name || "creator")
                                 .toLowerCase()
-                                .replace(/\s+/g, "")}
+                                .replace(/[^a-zA-Z0-9]/g, "")}
                         </div>
                       </div>
                     </div>
@@ -1543,14 +1613,12 @@ ${user?.brand_name}`,
           <div className="space-y-4">
             <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
               <img
-                src={
-                  selectedCreator.profile_image_url ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    selectedCreator.creator_name
-                  )}&background=3B82F6&color=fff`
-                }
+                src={getAvatarUrl(selectedCreator)}
                 alt={selectedCreator.creator_name}
                 className="w-12 h-12 rounded-full"
+                onError={(e) => {
+                  e.target.src = `https://ui-avatars.com/api/?name=Creator&background=3B82F6&color=fff`;
+                }}
               />
               <div>
                 <h3 className="font-semibold text-gray-900">
