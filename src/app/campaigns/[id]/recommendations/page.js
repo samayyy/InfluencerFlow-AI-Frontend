@@ -1655,7 +1655,7 @@ export default function CampaignAIRecommendationsPage() {
                               rec.score_breakdown?.content_fit * 100 || 0
                             ).toFixed(0)} */}
                             {/* assign random value between 60 to 90% */}
-                            {(60 + Math.random() * 30).toFixed(0)}%
+                            {(60 + Math.random() * 30).toFixed(0)}
                             %
                           </span>
                         </div>
@@ -1665,7 +1665,7 @@ export default function CampaignAIRecommendationsPage() {
                             {/* {(
                               rec.score_breakdown?.audience_alignment * 100 || 0
                             ).toFixed(0)} */}
-                            {(70 + Math.random() * 30).toFixed(0)}%
+                            {(70 + Math.random() * 30).toFixed(0)}
                             %
                           </span>
                         </div>
