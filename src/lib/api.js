@@ -240,6 +240,63 @@ class ApiClient {
     previewInfluencerMatch: (previewData) =>
       api.post("/campaigns/preview-influencer-match", previewData),
     getStats: () => api.get("/campaigns/stats"),
+    enhanced: {
+      // Create campaign from form with integrated product analysis
+      createFromForm: (campaignData) =>
+        api.post("/campaigns/enhanced/create-form", campaignData),
+
+      // Create campaign from uploaded document
+      createFromDocument: (documentFile, additionalData = {}) => {
+        const formData = new FormData();
+        formData.append("campaign_document", documentFile);
+
+        // Add any additional data
+        Object.keys(additionalData).forEach((key) => {
+          formData.append(key, additionalData[key]);
+        });
+
+        return api.post("/campaigns/enhanced/create-document", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      },
+
+      // Create campaign from NLP query
+      createFromQuery: (queryText) =>
+        api.post("/campaigns/enhanced/create-query", { query_text: queryText }),
+
+      // Preview AI analysis without creating campaign
+      previewAnalysis: (analysisData) =>
+        api.post("/campaigns/enhanced/preview-analysis", analysisData),
+
+      // Get full AI analysis for existing campaign
+      getFullAnalysis: (campaignId) =>
+        api.get(`/campaigns/enhanced/${campaignId}/full-analysis`),
+
+      // Regenerate AI analysis for existing campaign
+      regenerateAnalysis: (campaignId) =>
+        api.post(`/campaigns/enhanced/${campaignId}/regenerate-analysis`),
+
+      // Helper methods for different preview types
+      previewFromForm: (formData) =>
+        api.post("/campaigns/enhanced/preview-analysis", {
+          analysis_type: "form",
+          campaign_data: formData,
+        }),
+
+      previewFromQuery: (queryText) =>
+        api.post("/campaigns/enhanced/preview-analysis", {
+          analysis_type: "query",
+          query_text: queryText,
+        }),
+
+      previewFromUrl: (productUrl) =>
+        api.post("/campaigns/enhanced/preview-analysis", {
+          analysis_type: "url_only",
+          product_url: productUrl,
+        }),
+    },
 
     // Admin APIs
     admin: {
@@ -335,6 +392,304 @@ export const apiUtils = {
 
   // Format API URL
   formatUrl: (endpoint) => `${API_BASE_URL}${endpoint}`,
+};
+
+export const enhancedCampaignUtils = {
+  // Validate campaign creation data
+  validateCampaignData: (campaignData, creationType = "form") => {
+    const errors = [];
+
+    if (creationType === "form") {
+      if (!campaignData.campaign_name?.trim()) {
+        errors.push("Campaign name is required");
+      }
+      if (!campaignData.campaign_type) {
+        errors.push("Campaign type is required");
+      }
+    } else if (creationType === "query") {
+      if (!campaignData.query_text?.trim()) {
+        errors.push("Query text is required");
+      }
+      if (campaignData.query_text && campaignData.query_text.length < 50) {
+        errors.push("Query text must be at least 50 characters");
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  },
+
+  // Format campaign data for API submission
+  formatCampaignForSubmission: (formData) => {
+    return {
+      ...formData,
+      budget: formData.budget ? parseFloat(formData.budget) : undefined,
+      product_price: formData.product_price
+        ? parseFloat(formData.product_price)
+        : undefined,
+      hashtags: formData.hashtags
+        ? formData.hashtags.split(",").map((h) => h.trim().replace(/^#/, ""))
+        : undefined,
+      target_audience: Object.keys(formData.target_audience || {}).some(
+        (key) => formData.target_audience[key]
+      )
+        ? formData.target_audience
+        : undefined,
+    };
+  },
+
+  // Extract key insights from AI analysis
+  extractAnalysisInsights: (aiAnalysis) => {
+    const insights = {
+      confidence: 0,
+      keyFindings: [],
+      recommendations: [],
+      warnings: [],
+    };
+
+    if (aiAnalysis?.extracted_data?.extraction_metadata) {
+      insights.confidence =
+        aiAnalysis.extracted_data.extraction_metadata.confidence_score || 0;
+    }
+
+    if (aiAnalysis?.campaign_analysis?.campaign_intelligence) {
+      const intelligence = aiAnalysis.campaign_analysis.campaign_intelligence;
+      insights.keyFindings = [
+        intelligence.campaign_strategy,
+        ...(intelligence.success_metrics?.slice(0, 3) || []),
+      ];
+    }
+
+    if (aiAnalysis?.website_analysis?.brand_analysis) {
+      const brandAnalysis = aiAnalysis.website_analysis.brand_analysis;
+      insights.recommendations = [
+        brandAnalysis.influencer_collaboration_fit?.collaboration_goals?.[0],
+        ...(brandAnalysis.influencer_collaboration_fit?.ideal_creator_types?.slice(
+          0,
+          2
+        ) || []),
+      ].filter(Boolean);
+    }
+
+    if (
+      aiAnalysis?.extracted_data?.extraction_metadata?.missing_fields?.length >
+      0
+    ) {
+      insights.warnings.push(
+        `Missing ${aiAnalysis.extracted_data.extraction_metadata.missing_fields.length} fields - AI generated defaults`
+      );
+    }
+
+    return insights;
+  },
+
+  // Calculate campaign completeness score
+  calculateCompleteness: (campaignData, aiAnalysis = null) => {
+    const requiredFields = [
+      "campaign_name",
+      "campaign_type",
+      "description",
+      "objectives",
+      "budget",
+      "target_audience",
+      "content_guidelines",
+    ];
+
+    const presentFields = requiredFields.filter((field) => {
+      if (field === "target_audience") {
+        return (
+          campaignData[field] && Object.keys(campaignData[field]).length > 0
+        );
+      }
+      return campaignData[field]?.toString().trim();
+    });
+
+    let baseScore = (presentFields.length / requiredFields.length) * 70;
+
+    // Bonus points for AI enhancements
+    if (aiAnalysis?.website_analysis) baseScore += 15;
+    if (aiAnalysis?.campaign_analysis) baseScore += 10;
+    if (aiAnalysis?.influencer_recommendations?.recommendations?.length > 0)
+      baseScore += 5;
+
+    return Math.min(Math.round(baseScore), 100);
+  },
+
+  // Format file size for display
+  formatFileSize: (bytes) => {
+    if (!bytes) return "0 Bytes";
+
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  },
+
+  // Validate file for document upload
+  validateDocumentFile: (file) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+    ];
+
+    const errors = [];
+
+    if (!file) {
+      errors.push("No file selected");
+      return { isValid: false, errors };
+    }
+
+    if (file.size > maxSize) {
+      errors.push("File size must be less than 10MB");
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      errors.push("File must be PDF, DOC, DOCX, or TXT format");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      fileInfo: {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        formattedSize: enhancedCampaignUtils.formatFileSize(file.size),
+      },
+    };
+  },
+
+  // Parse campaign type to human readable
+  formatCampaignType: (type) => {
+    const typeMap = {
+      sponsored_post: "Sponsored Post",
+      brand_ambassador: "Brand Ambassador",
+      product_review: "Product Review",
+      event_coverage: "Event Coverage",
+      content_collaboration: "Content Collaboration",
+      giveaway: "Giveaway",
+    };
+
+    return (
+      typeMap[type] ||
+      type.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())
+    );
+  },
+
+  // Generate campaign summary from data
+  generateCampaignSummary: (campaignData, aiAnalysis = null) => {
+    const summary = {
+      title: campaignData.campaign_name || "Untitled Campaign",
+      type: enhancedCampaignUtils.formatCampaignType(
+        campaignData.campaign_type
+      ),
+      budget: campaignData.budget
+        ? `${
+            campaignData.currency || "USD"
+          } ${campaignData.budget.toLocaleString()}`
+        : "Budget not set",
+      timeline: "Timeline not set",
+      targetAudience: "Not specified",
+      aiEnhanced: false,
+      confidence: 0,
+    };
+
+    // Timeline
+    if (campaignData.start_date && campaignData.end_date) {
+      const start = new Date(campaignData.start_date).toLocaleDateString();
+      const end = new Date(campaignData.end_date).toLocaleDateString();
+      summary.timeline = `${start} - ${end}`;
+    } else if (campaignData.event_date) {
+      summary.timeline = `Event: ${new Date(
+        campaignData.event_date
+      ).toLocaleDateString()}`;
+    }
+
+    // Target audience
+    if (campaignData.target_audience?.demographics) {
+      summary.targetAudience = campaignData.target_audience.demographics;
+    } else if (
+      aiAnalysis?.campaign_analysis?.target_audience_analysis?.audience_persona
+    ) {
+      summary.targetAudience =
+        aiAnalysis.campaign_analysis.target_audience_analysis.audience_persona;
+    }
+
+    // AI enhancement info
+    if (aiAnalysis) {
+      summary.aiEnhanced = true;
+      summary.confidence =
+        aiAnalysis.extracted_data?.extraction_metadata?.confidence_score || 0;
+    }
+
+    return summary;
+  },
+
+  // Helper to check if campaign needs more information
+  identifyMissingInfo: (campaignData) => {
+    const missing = [];
+
+    if (!campaignData.description?.trim()) missing.push("Campaign description");
+    if (!campaignData.objectives?.trim()) missing.push("Campaign objectives");
+    if (!campaignData.budget) missing.push("Budget");
+    if (
+      !campaignData.target_audience ||
+      Object.keys(campaignData.target_audience).length === 0
+    ) {
+      missing.push("Target audience");
+    }
+    if (!campaignData.content_guidelines?.trim())
+      missing.push("Content guidelines");
+    if (!campaignData.start_date) missing.push("Start date");
+    if (!campaignData.end_date && !campaignData.event_date)
+      missing.push("End date or event date");
+
+    return missing;
+  },
+
+  // Generate recommendations based on campaign type
+  generateTypeSpecificRecommendations: (campaignType) => {
+    const recommendations = {
+      sponsored_post: [
+        "Include clear CTA in content guidelines",
+        "Specify brand mention requirements",
+        "Consider story + feed post combination",
+      ],
+      brand_ambassador: [
+        "Plan for long-term relationship",
+        "Create exclusive discount codes",
+        "Establish regular content calendar",
+      ],
+      product_review: [
+        "Allow sufficient time for product testing",
+        "Encourage honest, detailed feedback",
+        "Provide product information packet",
+      ],
+      event_coverage: [
+        "Confirm attendance requirements",
+        "Plan live coverage schedule",
+        "Prepare event-specific hashtags",
+      ],
+      content_collaboration: [
+        "Define creative freedom boundaries",
+        "Plan collaborative ideation session",
+        "Establish revision process",
+      ],
+      giveaway: [
+        "Ensure compliance with platform rules",
+        "Plan winner selection process",
+        "Create clear entry requirements",
+      ],
+    };
+
+    return recommendations[campaignType] || [];
+  },
 };
 
 // Create and export singleton instance
