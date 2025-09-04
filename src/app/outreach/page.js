@@ -621,14 +621,6 @@ export default function OutreachPage() {
                 <span className="text-gray-600">Method:</span>
                 <span className="ml-2 font-medium">{call.call_method}</span>
               </div>
-              {call.elevenlabs_conversation_id && (
-                <div>
-                  <span className="text-gray-600">ElevenLabs ID:</span>
-                  <span className="ml-2 font-mono text-xs">
-                    {call.elevenlabs_conversation_id}
-                  </span>
-                </div>
-              )}
               <div>
                 <span className="text-gray-600">Created:</span>
                 <span className="ml-2">{formatDateTime(call.created_at)}</span>

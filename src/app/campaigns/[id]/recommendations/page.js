@@ -272,7 +272,7 @@ export default function CampaignAIRecommendationsPage() {
       // Prepare call data with only required fields
       const callData = {
         creator_id: creator.id,
-        phone_number: "+919167924380",
+        phone_number: "+918454973792",
       };
 
       // Add campaign_id and notes only if campaign is available
